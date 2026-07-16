@@ -47,7 +47,7 @@ pub fn detect() -> EnvironmentReport {
     }
 }
 
-fn home_dir() -> PathBuf {
+pub(crate) fn home_dir() -> PathBuf {
     let var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
     std::env::var_os(var).map(PathBuf::from).unwrap_or_default()
 }

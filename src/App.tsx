@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 interface ToolInfo {
@@ -18,6 +18,23 @@ interface EnvironmentReport {
 }
 
 const STEPS = ["진단", "설치", "로그인", "첫 프로젝트", "졸업식"] as const;
+
+type InstallEvent =
+  | { type: "phase"; name: string }
+  | { type: "log"; line: string };
+
+interface InstallResult {
+  version: string;
+  path: string;
+  profileUpdated: string | null;
+}
+
+const INSTALL_PHASES = [
+  { id: "download", label: "설치 파일 내려받기" },
+  { id: "install", label: "클로드 코드 설치하기" },
+  { id: "path", label: "터미널 설정 정리하기" },
+  { id: "verify", label: "잘 됐는지 확인하기" },
+] as const;
 
 function osLabel(report: EnvironmentReport): string {
   if (report.os === "macos") {
@@ -59,6 +76,8 @@ function App() {
             onReport={setReport}
             onNext={() => setStep(1)}
           />
+        ) : step === 1 ? (
+          <InstallStep report={report} onNext={() => setStep(2)} />
         ) : (
           <PlaceholderStep name={STEPS[step]} onBack={() => setStep(0)} />
         )}
@@ -159,6 +178,123 @@ function DiagnosisStep({
           {claude ? "설치는 건너뛰고 다음으로" : "다음: 설치하러 가기"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function InstallStep({
+  report,
+  onNext,
+}: {
+  report: EnvironmentReport | null;
+  onNext: () => void;
+}) {
+  const [phase, setPhase] = useState<string | null>(null);
+  const [log, setLog] = useState<string[]>([]);
+  const [result, setResult] = useState<InstallResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const running = phase !== null && !result && !error;
+
+  // 진단에서 이미 설치가 확인된 경우
+  if (report?.claude && !result) {
+    return (
+      <div className="center">
+        <h2>이미 설치되어 있어요 ✅</h2>
+        <p className="muted">
+          클로드 코드 {report.claude.version.split(" ")[0]} 버전이 컴퓨터에
+          있어요.
+          <br />이 단계는 할 일이 없으니 바로 넘어갈게요.
+        </p>
+        <button className="primary" onClick={onNext}>
+          다음: 로그인 확인하러 가기
+        </button>
+      </div>
+    );
+  }
+
+  async function start() {
+    setError(null);
+    setLog([]);
+    setResult(null);
+    setPhase("download");
+    const onEvent = new Channel<InstallEvent>();
+    onEvent.onmessage = (e) => {
+      if (e.type === "phase") setPhase(e.name);
+      else setLog((prev) => [...prev.slice(-199), e.line]);
+    };
+    try {
+      setResult(
+        await invoke<InstallResult>("install_claude_code", {
+          testHome: null,
+          onEvent,
+        }),
+      );
+    } catch (err) {
+      setError(String(err));
+    }
+  }
+
+  if (result) {
+    return (
+      <div className="center">
+        <h2>설치가 끝났어요 🎉</h2>
+        <p className="muted">
+          클로드 코드 {result.version.split(" ")[0]} 버전이 설치됐어요.
+          <br />
+          {result.profileUpdated
+            ? "터미널에서도 바로 쓸 수 있게 설정까지 마쳤어요."
+            : "터미널 설정은 이미 되어 있어서 그대로 뒀어요."}
+        </p>
+        <button className="primary" onClick={onNext}>
+          다음: 로그인 확인하러 가기
+        </button>
+      </div>
+    );
+  }
+
+  if (running) {
+    const currentIndex = INSTALL_PHASES.findIndex((p) => p.id === phase);
+    return (
+      <div>
+        <h2>설치하고 있어요</h2>
+        <p className="muted">보통 1분 안에 끝나요. 창을 닫지 말고 기다려 주세요.</p>
+        <ul className="phases">
+          {INSTALL_PHASES.map((p, i) => (
+            <li
+              key={p.id}
+              className={
+                i < currentIndex ? "done" : i === currentIndex ? "active" : ""
+              }
+            >
+              <span className="phase-mark">
+                {i < currentIndex ? "✓" : i === currentIndex ? "…" : "•"}
+              </span>
+              {p.label}
+            </li>
+          ))}
+        </ul>
+        {log.length > 0 && (
+          <details className="log">
+            <summary>자세한 진행 내용 보기</summary>
+            <pre>{log.join("\n")}</pre>
+          </details>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="center">
+      <h2>클로드 코드를 설치할게요</h2>
+      <p className="muted">
+        버튼 하나만 누르면 다운로드부터 터미널 설정까지 알아서 진행돼요.
+        <br />
+        공식 설치 파일(claude.ai)만 사용하니 안심하세요.
+      </p>
+      {error && <p className="error">{error}</p>}
+      <button className="primary" onClick={start}>
+        {error ? "다시 설치하기" : "설치 시작하기"}
+      </button>
     </div>
   );
 }
