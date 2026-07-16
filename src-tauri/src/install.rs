@@ -171,7 +171,10 @@ fn installer_command(script: &Path, home: &Path) -> Command {
     let mut c = crate::detect::command(&powershell_path());
     c.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
         .arg(script)
-        .env("USERPROFILE", home);
+        .env("USERPROFILE", home)
+        // 부모가 pwsh 7 등이면 PSModulePath가 오염되어 5.1이 기본 cmdlet을 못 찾는다.
+        // 제거하면 PowerShell이 자기 기본 모듈 경로를 재구성한다.
+        .env_remove("PSModulePath");
     c
 }
 
@@ -216,6 +219,7 @@ fn ensure_path(home: &Path) -> Result<Option<String>, String> {
     );
     let out = crate::detect::command(&powershell_path())
         .args(["-NoProfile", "-Command", &ps])
+        .env_remove("PSModulePath")
         .output()
         .map_err(|e| format!("터미널 설정 도구를 실행하지 못했어요: {e}"))?;
     if !out.status.success() {
