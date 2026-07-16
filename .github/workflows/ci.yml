@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # 프론트 빌드 + Rust 테스트 (macOS / Windows 동시)
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: 프론트엔드 빌드 (tsc + vite)
+        run: pnpm build
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Rust 테스트
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      # 실제 인스톨러를 내려받아 격리 HOME에 무인 설치하는 E2E (macOS만, 네트워크 사용)
+      - name: 설치 파이프라인 격리 E2E
+        if: runner.os == 'macOS'
+        run: cargo test --manifest-path src-tauri/Cargo.toml isolated_install -- --ignored --nocapture
+
+  # Windows 번들 빌드 검증 — 로컬(맥)에서 못 하는 것을 CI가 대신한다 (M0 가정 4)
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Tauri Windows 빌드 (NSIS 인스톨러)
+        run: pnpm tauri build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
