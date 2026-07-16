@@ -216,6 +216,38 @@ body {
   color: #fff;
 }
 
+.phase-detail {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.progress-track {
+  height: 8px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 16px 0 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 40%;
+  background: var(--primary);
+  border-radius: 4px;
+  animation: progress-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  0% {
+    margin-left: -40%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+
 .log {
   margin-top: 16px;
   font-size: 13px;

@@ -22,7 +22,8 @@ const STEPS = ["진단", "설치", "로그인", "첫 프로젝트", "졸업식"]
 
 type InstallEvent =
   | { type: "phase"; name: string }
-  | { type: "log"; line: string };
+  | { type: "log"; line: string }
+  | { type: "progress"; downloadedBytes: number };
 
 interface InstallResult {
   version: string;
@@ -225,6 +226,7 @@ function InstallStep({
 }) {
   const [phase, setPhase] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [downloaded, setDownloaded] = useState(0);
   const [result, setResult] = useState<InstallResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const running = phase !== null && !result && !error;
@@ -249,11 +251,13 @@ function InstallStep({
   async function start() {
     setError(null);
     setLog([]);
+    setDownloaded(0);
     setResult(null);
     setPhase("download");
     const onEvent = new Channel<InstallEvent>();
     onEvent.onmessage = (e) => {
       if (e.type === "phase") setPhase(e.name);
+      else if (e.type === "progress") setDownloaded(e.downloadedBytes);
       else setLog((prev) => [...prev.slice(-199), e.line]);
     };
     try {
@@ -291,7 +295,10 @@ function InstallStep({
     return (
       <div>
         <h2>설치하고 있어요</h2>
-        <p className="muted">보통 1분 안에 끝나요. 창을 닫지 말고 기다려 주세요.</p>
+        <p className="muted">
+          컴퓨터와 인터넷 속도에 따라 1~5분 정도 걸려요. 창을 닫지 말고 기다려
+          주세요.
+        </p>
         <ul className="phases">
           {INSTALL_PHASES.map((p, i) => (
             <li
@@ -304,9 +311,17 @@ function InstallStep({
                 {i < currentIndex ? "✓" : i === currentIndex ? "…" : "•"}
               </span>
               {p.label}
+              {p.id === "install" && i === currentIndex && downloaded > 0 && (
+                <span className="phase-detail">
+                  {Math.round(downloaded / 1024 / 1024)}MB 받았어요
+                </span>
+              )}
             </li>
           ))}
         </ul>
+        <div className="progress-track">
+          <div className="progress-fill" />
+        </div>
         {log.length > 0 && (
           <details className="log">
             <summary>자세한 진행 내용 보기</summary>
@@ -368,6 +383,26 @@ function LoginStep({ onNext }: { onNext: () => void }) {
   useEffect(() => {
     check();
   }, []);
+
+  // 브라우저에 이미 세션이 있으면 코드 없이 자동 승인으로 끝나는 경로가 있으므로,
+  // 기다리는 동안 로그인 완료를 폴링으로 감지한다 (Windows 실테스트에서 발견)
+  useEffect(() => {
+    if (mode !== "waiting") return;
+    const timer = setInterval(async () => {
+      try {
+        const s = await invoke<LoginStatus>("login_status");
+        if (s.loggedIn) {
+          await invoke("cancel_login").catch(() => {});
+          setStatus(s);
+          setError(null);
+          setMode("idle");
+        }
+      } catch {
+        // 일시적 확인 실패는 무시하고 다음 폴링을 기다린다
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [mode]);
 
   async function openSession() {
     setUrl(null);
@@ -464,8 +499,13 @@ function LoginStep({ onNext }: { onNext: () => void }) {
         <h2>브라우저에서 로그인해 주세요</h2>
         <ol className="guide">
           <li>방금 열린 브라우저 창에서 클로드 계정으로 로그인해요.</li>
-          <li>로그인이 끝나면 화면에 <strong>확인 코드</strong>가 나와요.</li>
-          <li>그 코드를 복사해서 아래 칸에 붙여넣어 주세요.</li>
+          <li>
+            로그인이 끝나면 <strong>이 화면이 알아서 다음으로 넘어가요.</strong>
+          </li>
+          <li>
+            브라우저에 <strong>확인 코드</strong>가 보이는 경우에만, 복사해서
+            아래 칸에 붙여넣어 주세요.
+          </li>
         </ol>
         {url && (
           <p className="muted">

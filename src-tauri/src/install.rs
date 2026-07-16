@@ -8,10 +8,12 @@ const SCRIPT_URL_UNIX: &str = "https://claude.ai/install.sh";
 const SCRIPT_URL_WINDOWS: &str = "https://claude.ai/install.ps1";
 
 #[derive(Serialize, Clone, Debug)]
-#[serde(rename_all = "camelCase", tag = "type")]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "type")]
 pub enum InstallEvent {
     Phase { name: String },
     Log { line: String },
+    /// 지금까지 내려받은 바이트 수 (다운로드 폴더 크기 관찰값)
+    Progress { downloaded_bytes: u64 },
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -80,7 +82,11 @@ pub fn run_install(
 
     let stdout = child.stdout.take().expect("stdout is piped");
     let stderr = child.stderr.take().expect("stderr is piped");
-    std::thread::scope(|s| {
+    // 인스톨러는 다운로드 진행률을 출력하지 않으므로,
+    // 다운로드 폴더 크기를 관찰해 진행 이벤트를 만든다
+    let downloads_dir = home.join(".claude").join("downloads");
+    let stop = std::sync::atomic::AtomicBool::new(false);
+    let status = std::thread::scope(|s| {
         for reader in [
             Box::new(stdout) as Box<dyn std::io::Read + Send>,
             Box::new(stderr),
@@ -93,10 +99,25 @@ pub fn run_install(
                 }
             });
         }
-    });
-    let status = child
-        .wait()
-        .map_err(|e| format!("설치 진행 상태를 확인하지 못했어요: {e}"))?;
+        let (stop_ref, dir) = (&stop, downloads_dir);
+        s.spawn(move || {
+            let mut last = 0u64;
+            while !stop_ref.load(std::sync::atomic::Ordering::Relaxed) {
+                let size = dir_size(&dir);
+                if size > last {
+                    last = size;
+                    emit(InstallEvent::Progress {
+                        downloaded_bytes: size,
+                    });
+                }
+                std::thread::sleep(std::time::Duration::from_millis(500));
+            }
+        });
+        let status = child.wait();
+        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+        status
+    })
+    .map_err(|e| format!("설치 진행 상태를 확인하지 못했어요: {e}"))?;
     let _ = std::fs::remove_file(&script);
     if !status.success() {
         return Err(format!(
@@ -130,6 +151,17 @@ pub fn run_install(
         path: bin.display().to_string(),
         profile_updated,
     })
+}
+
+fn dir_size(dir: &Path) -> u64 {
+    std::fs::read_dir(dir)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok().and_then(|e| e.metadata().ok()))
+                .map(|m| m.len())
+                .sum()
+        })
+        .unwrap_or(0)
 }
 
 fn home_env_var() -> &'static str {

@@ -36,17 +36,28 @@ pub async fn login_status() -> Result<LoginStatus, String> {
     tauri::async_runtime::spawn_blocking(|| {
         let bin = crate::detect::claude_bin()
             .ok_or_else(|| "클로드 코드가 아직 설치되어 있지 않아요.".to_string())?;
-        let out = crate::detect::command(&bin)
-            .args(["auth", "status", "--json"])
-            .stdin(Stdio::null())
-            .output()
-            .map_err(|e| format!("로그인 상태를 확인하지 못했어요: {e}"))?;
-        let text = String::from_utf8_lossy(&out.stdout);
-        serde_json::from_str(text.trim())
-            .map_err(|_| "로그인 상태 응답을 이해하지 못했어요.".to_string())
+        query_status(&bin)
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+fn query_status(bin: &std::path::Path) -> Result<LoginStatus, String> {
+    let out = crate::detect::command(bin)
+        .args(["auth", "status", "--json"])
+        .stdin(Stdio::null())
+        .output()
+        .map_err(|e| format!("로그인 상태를 확인하지 못했어요: {e}"))?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    serde_json::from_str(text.trim())
+        .map_err(|_| "로그인 상태 응답을 이해하지 못했어요.".to_string())
+}
+
+fn is_logged_in() -> bool {
+    crate::detect::claude_bin()
+        .and_then(|bin| query_status(&bin).ok())
+        .map(|s| s.logged_in)
+        .unwrap_or(false)
 }
 
 /// `claude auth login`을 백그라운드로 시작한다.
@@ -121,11 +132,39 @@ pub async fn submit_login_code(
                 .write_all(format!("{}\n", code.trim()).as_bytes())
                 .map_err(|e| format!("코드를 전달하지 못했어요: {e}"))?;
         }
-        // 코드가 틀리면 CLI가 다시 물으며 종료되지 않으므로 대기 시간을 제한한다
-        let success = wait_with_timeout(&mut child, std::time::Duration::from_secs(30));
-        if !success {
+        // 프로세스 종료를 기다리되, 코드 교환이 성공했는데도 CLI가 안 끝나는 경우
+        // (조직 선택 프롬프트 등)가 있으므로 로그인 상태를 함께 폴링해 판정한다
+        let mut success = false;
+        let start = std::time::Instant::now();
+        let mut last_status_check = std::time::Instant::now();
+        loop {
+            match child.try_wait() {
+                Ok(Some(status)) => {
+                    success = status.success();
+                    break;
+                }
+                Ok(None) => {}
+                Err(_) => break,
+            }
+            if last_status_check.elapsed() > std::time::Duration::from_secs(3) {
+                last_status_check = std::time::Instant::now();
+                if is_logged_in() {
+                    success = true;
+                    break;
+                }
+            }
+            if start.elapsed() > std::time::Duration::from_secs(60) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(300));
+        }
+        if child.try_wait().ok().flatten().is_none() {
             let _ = child.kill();
             let _ = child.wait();
+        }
+        // 최종 안전망: 프로세스 판정과 무관하게 실제 로그인 여부가 진실
+        if !success {
+            success = is_logged_in();
         }
         let _ = on_event.send(LoginEvent::Exit { success });
         if success {
@@ -143,22 +182,6 @@ pub fn cancel_login(session: State<'_, LoginSession>) {
     if let Some(mut child) = session.0.lock().unwrap().take() {
         let _ = child.kill();
         let _ = child.wait();
-    }
-}
-
-fn wait_with_timeout(child: &mut Child, timeout: std::time::Duration) -> bool {
-    let start = std::time::Instant::now();
-    loop {
-        match child.try_wait() {
-            Ok(Some(status)) => return status.success(),
-            Ok(None) => {
-                if start.elapsed() > timeout {
-                    return false;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(200));
-            }
-            Err(_) => return false,
-        }
     }
 }
 
