@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Hello, Agent brand mark</title>
+  <desc id="desc">A tilted coral tile with two white conversation lines.</desc>
+  <g transform="rotate(-5 512 512)">
+    <rect x="112" y="112" width="800" height="800" rx="230" fill="#e8593a"/>
+    <rect x="332" y="360" width="360" height="84" rx="42" fill="#ffffff"/>
+    <rect x="332" y="570" width="248" height="84" rx="42" fill="#ffffff"/>
+  </g>
+</svg>

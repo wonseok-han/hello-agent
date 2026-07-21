@@ -29,6 +29,7 @@
 - **스코프**: Codex는 원래 2단계였으나 조기 편입(2026-07-16). Gemini 등 추가는 여전히 2단계
 - **UI**: Pretendard + 중성 배경 + 코랄 액센트. 갈색 종이 콘셉트는 사용자가 반려함
 - **소개 웹사이트**: 데스크톱 앱과 배포 단위를 분리해 `website/`에서 관리. Vinext + OpenAI Sites 기반의 한국어 정적 랜딩 페이지
+- **브랜드 마크**: `brand/hello-agent-mark.svg`가 정식 원본. 코랄 타일 + 흰 대화선 형태이며 웹 파비콘과 Tauri macOS·Windows 앱 아이콘을 동일 원본에서 생성
 - **i18n**: 라이브러리 없이 경량 자체 방식(`src/i18n.tsx` Context/훅 + `src/locales/{ko,en}.ts`). 헤더 언어 토글, 시스템 언어 초기값 + localStorage. 이름 `Hello, Agent`는 언어 무관 고정, UI 문구만 전환. 새 문구는 ko/en 양쪽에 키를 추가해야 함(en은 `Record<MessageKey,string>`으로 누락 시 컴파일 에러)
 - **백엔드 에러 i18n 미완**: Rust 에러 메시지가 한국어 하드코딩 → 영어 모드에서 원시 텍스트는 한국어로 남음. 닥터(`src/doctor.ts` 프론트 패턴 해석)가 초보자 문구는 영어로 덮지만, "자세한 내용"의 원시 로그는 그대로. 완전 대응은 백엔드 에러 구조화(kind+detail) 필요
 - **닥터**: 에러·로그를 프론트에서 정규식 패턴 매칭해 network/checksum/notfound/permission/disk로 분류(+generic 폴백), i18n 문구로 표시 + 재시도. 설치·졸업식 단계에 적용(로그인 단계는 미적용)
@@ -44,6 +45,16 @@
 ---
 
 ## 워크로그 (최신이 위)
+
+### 2026-07-21 · by GPT-5 Codex
+
+**한 일**
+- 웹사이트 헤더의 코랄 브랜드 마크를 `brand/hello-agent-mark.svg` 정식 원본으로 제작
+- Tauri 아이콘 생성기를 사용해 macOS `.icns`, Windows `.ico`, PNG·Appx 아이콘 세트를 새 브랜드 마크로 교체
+- 웹사이트에 일반 파비콘(`app/icon.png`)과 Apple 터치 아이콘(`app/apple-icon.png`) 적용
+
+**다음 할 일**
+- [ ] 실제 macOS Dock·Windows 시작 메뉴에서 작은 크기 가독성 확인
 
 ### 2026-07-21 · by Claude Opus 4.8
 

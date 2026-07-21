@@ -13,3 +13,4 @@ npm test
 - 전역 스타일: `app/globals.css`
 - 메타데이터: `app/layout.tsx`
 - Sites 설정: `.openai/hosting.json`
+- 브랜드 아이콘 원본: `../brand/hello-agent-mark.svg`
