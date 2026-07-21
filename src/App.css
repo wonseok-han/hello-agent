@@ -252,6 +252,7 @@ body {
   border: 1.5px solid var(--line);
   border-radius: 14px;
   background: var(--panel);
+  color: var(--ink);
   text-align: left;
   cursor: pointer;
   font-weight: 500;

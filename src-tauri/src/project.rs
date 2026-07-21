@@ -42,6 +42,63 @@ approval_policy = \"untrusted\"
 sandbox_mode = \"workspace-write\"
 ";
 
+/// 사용자가 졸업 후 스스로 이어가도록 폴더에 남기는 안내(사람용).
+/// CLAUDE.md/AGENTS.md는 에이전트용 지침, 이 문서는 사용자용.
+fn getting_started_md(agent: Agent) -> String {
+    let name = agent.display_name();
+    let cmd = agent.bin_name();
+    format!(
+        "# 여기서 시작하기 🚀
+
+축하해요! 이제 {name}를 쓸 준비가 끝났어요.
+이 폴더는 여러분의 첫 작업실이에요. 앞으로 {name}와 하는 작업은 여기에 쌓여요.
+
+## 1단계. 편집기(코드 프로그램) 설치하기
+
+코드를 보고 만들려면 '편집기'가 있으면 훨씬 편해요. 처음이라면 아래 둘 중 하나를 추천해요. 모두 무료예요.
+
+- **Cursor** — AI 기능이 처음부터 들어가 있어 초보자에게 편해요. <https://cursor.com>
+- **VS Code** — 세계에서 가장 많이 쓰는 편집기예요. <https://code.visualstudio.com>
+
+설치한 뒤 편집기에서 **이 폴더를 열어** 주세요.
+(편집기 메뉴에서 '폴더 열기(Open Folder)' → 이 폴더 선택)
+
+## 2단계. {name} 실행하기
+
+편집기 안에는 '터미널'이라는 입력창이 있어요. 메뉴에서 터미널을 열고,
+아래 한 줄을 입력한 뒤 Enter를 눌러요.
+
+```
+{cmd}
+```
+
+그러면 {name}와 대화가 시작돼요. 검은 창이 조금 낯설어도 괜찮아요 —
+그냥 한국어로 말을 걸면 돼요.
+
+## 3단계. 무엇을 시켜볼까요?
+
+이렇게 말을 걸어보세요.
+
+- \"간단한 할 일 목록 웹페이지를 만들어줘\"
+- \"오늘 배운 걸 정리할 메모 파일을 만들어줘\"
+- \"이 폴더에 뭐가 있는지 설명해줘\"
+
+궁금한 건 뭐든 편하게 물어봐도 돼요.
+
+## 안전하게 쓰기
+
+- 이 폴더 안에서만 작업하도록 안전장치를 넣어놨어요.
+- 파일을 지우거나 큰 변경을 하기 전에는 {name}가 먼저 물어봐요.
+  잘 모르겠으면 일단 '아니오'라고 하고, 왜 필요한지 되물어보세요.
+
+## 막혔을 때
+
+빨간 글씨(에러)가 나와도 당황하지 마세요. 그 글씨를 그대로 복사해서
+{name}에게 \"이거 무슨 뜻이야? 어떻게 고쳐?\"라고 물어보면 대부분 스스로 해결해줘요.
+"
+    )
+}
+
 #[tauri::command]
 pub async fn create_first_project(
     agent: String,
@@ -97,6 +154,9 @@ fn apply_safety_preset(agent: Agent, dir: &Path) -> Result<(), String> {
             )?;
         }
     }
+
+    // 사용자용 시작 안내 (두 에이전트 공통)
+    write_if_absent(dir.join("시작하기.md"), &getting_started_md(agent))?;
     Ok(())
 }
 
@@ -188,6 +248,9 @@ mod tests {
             std::fs::read_to_string(dir.join(".claude").join("settings.json")).unwrap();
         assert!(settings.contains("deny"));
         serde_json::from_str::<serde_json::Value>(&settings).expect("valid json");
+        // 사용자용 시작 안내에 실행 명령이 들어 있어야 함
+        let guide = std::fs::read_to_string(dir.join("시작하기.md")).unwrap();
+        assert!(guide.contains("claude"));
         // 두 번째 호출은 재사용으로 판정돼야 함
         let again = create(Agent::ClaudeCode, Some(name)).unwrap();
         assert!(!again.created);

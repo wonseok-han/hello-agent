@@ -730,8 +730,8 @@ function ProjectStep({
             ? "문서 폴더 안에 새 폴더를 만들었어요."
             : "이미 있던 폴더를 그대로 쓸게요."}
           <br />
-          안전장치도 함께 넣었어요 — 위험한 작업은 시작 전에 꼭 물어보게
-          되어 있어요.
+          안전장치와 함께, 다음에 혼자 이어갈 수 있게 <strong>시작하기.md</strong>{" "}
+          안내 문서도 넣어뒀어요.
         </p>
         <code className="path-box">{project.path}</code>
         <button className="primary" onClick={onNext}>

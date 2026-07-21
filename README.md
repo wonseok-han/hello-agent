@@ -51,7 +51,3 @@ cargo test --manifest-path src-tauri/Cargo.toml # Rust 테스트
 ## 상태
 
 개발 중입니다. 기술 검증(M0)과 해피패스 위저드(M1), 개념·안전 안내(M2)가 동작하며, 에러 자동 해석(M3 닥터)과 정식 배포가 남았습니다.
-
-## 라이선스
-
-[MIT](LICENSE)
