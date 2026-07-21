@@ -138,6 +138,19 @@ function App() {
     setStep(1);
   }
 
+  // 배포 빌드에서 웹뷰 우클릭 메뉴를 막는다(입력창은 붙여넣기 위해 예외).
+  // 개발 중에는 devtools 우클릭이 필요하므로 유지한다.
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    const block = (e: MouseEvent) => {
+      const el = e.target as HTMLElement;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") return;
+      e.preventDefault();
+    };
+    document.addEventListener("contextmenu", block);
+    return () => document.removeEventListener("contextmenu", block);
+  }, []);
+
   return (
     <div className="app">
       <header className="header">

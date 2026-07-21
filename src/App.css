@@ -37,6 +37,18 @@ body {
   margin: 0;
   background: var(--bg);
   min-height: 100vh;
+  /* 웹뷰 기본 동작(텍스트 블럭 선택)을 막아 네이티브 앱처럼 보이게 한다 */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 복사가 필요한 곳(입력창·경로·로그·에러 상세)만 선택을 허용한다 */
+input,
+textarea,
+pre,
+.path-box {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .app {
