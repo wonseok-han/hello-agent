@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Channel, invoke } from "@tauri-apps/api/core";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { useI18n } from "./i18n";
+import { diagnose } from "./doctor";
 import type { MessageKey } from "./locales/ko";
 import "./App.css";
 
@@ -86,6 +87,41 @@ function osLabel(report: EnvironmentReport): string {
   }
   if (report.os === "windows") return "Windows";
   return `${report.os} (${report.arch})`;
+}
+
+// 닥터: 에러·로그를 초보자용 진단으로 풀어주고 재시도를 돕는다 (M3 — 삽질 분류 G)
+function DoctorCard({
+  error,
+  log,
+  onRetry,
+  retryLabel,
+}: {
+  error: string;
+  log?: string[];
+  onRetry?: () => void;
+  retryLabel?: string;
+}) {
+  const { t } = useI18n();
+  const dx = diagnose(error, log);
+  const detail = [error, ...(log ?? [])].filter(Boolean).join("\n");
+  return (
+    <div className="doctor">
+      <span className="doctor-badge">{t("doctor.badge")}</span>
+      <strong>{t(dx.titleKey)}</strong>
+      <p>{t(dx.adviceKey)}</p>
+      {onRetry && (
+        <button className="primary" onClick={onRetry}>
+          {retryLabel ?? t("doctor.retry")}
+        </button>
+      )}
+      {detail && (
+        <details className="doctor-details">
+          <summary>{t("doctor.details")}</summary>
+          <pre>{detail}</pre>
+        </details>
+      )}
+    </div>
+  );
 }
 
 function App() {
@@ -420,22 +456,28 @@ function InstallStep({
     );
   }
 
+  if (error) {
+    return (
+      <div className="center">
+        <h2>{t("install.fail.title")}</h2>
+        <p className="muted">{t("install.fail.desc")}</p>
+        <DoctorCard
+          error={error}
+          log={log}
+          onRetry={start}
+          retryLabel={t("install.retry")}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="center">
-      <h2>{error ? t("install.fail.title") : t("install.start.title", { name })}</h2>
-      <p className="muted">
-        {error ? t("install.fail.desc") : t("install.start.desc")}
-      </p>
-      {error && <p className="error">{error}</p>}
+      <h2>{t("install.start.title", { name })}</h2>
+      <p className="muted">{t("install.start.desc")}</p>
       <button className="primary" onClick={start}>
-        {error ? t("install.retry") : t("install.start.btn")}
+        {t("install.start.btn")}
       </button>
-      {error && log.length > 0 && (
-        <details className="log">
-          <summary>{t("install.log.what")}</summary>
-          <pre>{log.join("\n")}</pre>
-        </details>
-      )}
     </div>
   );
 }
@@ -873,10 +915,17 @@ function GraduationStep({
     <div className="center">
       <h2>{t("grad.last.title")}</h2>
       <p className="muted">{t("grad.last.desc", { name })}</p>
-      {error && <p className="error">{error}</p>}
-      <button className="primary" onClick={chat}>
-        {t("grad.sayHi", { name })}
-      </button>
+      {error ? (
+        <DoctorCard
+          error={error}
+          onRetry={chat}
+          retryLabel={t("grad.sayHi", { name })}
+        />
+      ) : (
+        <button className="primary" onClick={chat}>
+          {t("grad.sayHi", { name })}
+        </button>
+      )}
     </div>
   );
 }

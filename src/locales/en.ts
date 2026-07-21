@@ -134,4 +134,21 @@ export const en: Record<MessageKey, string> = {
   "plan.max": "Max plan",
   "plan.team": "Team plan",
   "plan.enterprise": "Enterprise plan",
+
+  "doctor.badge": "What went wrong?",
+  "doctor.retry": "Try again",
+  "doctor.details": "Show details",
+  "doctor.network.title": "There's an internet connection problem",
+  "doctor.network.advice": "Check that your Wi-Fi or internet is connected, then try again.",
+  "doctor.checksum.title": "The download got corrupted partway",
+  "doctor.checksum.advice": "Something went wrong while downloading. Trying again usually fixes it.",
+  "doctor.notfound.title": "Couldn't find the program's location",
+  "doctor.notfound.advice": "It's installed, but your computer doesn't know where it is yet. Try again, or restart the app and run the check from the start.",
+  "doctor.permission.title": "Not enough permission",
+  "doctor.permission.advice": "This action needs a permission you don't have. Make sure your account is an administrator on this computer.",
+  "doctor.disk.title": "Not enough storage space",
+  "doctor.disk.advice": "Free up a little storage on your computer, then try again.",
+  "doctor.generic.title": "Something went wrong",
+  "doctor.generic.advice": "Trying again usually fixes it. If it keeps failing, copy the details below to get help.",
 };
+

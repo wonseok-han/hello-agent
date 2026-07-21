@@ -133,6 +133,22 @@ export const ko = {
   "plan.max": "Max 요금제",
   "plan.team": "Team 요금제",
   "plan.enterprise": "Enterprise 요금제",
+
+  "doctor.badge": "무엇이 문제일까요?",
+  "doctor.retry": "다시 시도",
+  "doctor.details": "자세한 내용 보기",
+  "doctor.network.title": "인터넷 연결에 문제가 있어요",
+  "doctor.network.advice": "와이파이나 인터넷이 연결되어 있는지 확인하고 다시 시도해 주세요.",
+  "doctor.checksum.title": "다운로드가 도중에 손상됐어요",
+  "doctor.checksum.advice": "파일을 받는 중 문제가 생겼어요. 다시 시도하면 대부분 해결돼요.",
+  "doctor.notfound.title": "프로그램 위치를 못 찾았어요",
+  "doctor.notfound.advice": "설치는 됐지만 컴퓨터가 위치를 아직 몰라요. 다시 시도하거나, 앱을 껐다 켠 뒤 진단부터 다시 해보세요.",
+  "doctor.permission.title": "권한이 부족해요",
+  "doctor.permission.advice": "이 작업에 필요한 권한이 없어요. 사용 중인 계정이 이 컴퓨터의 관리자 계정인지 확인해 주세요.",
+  "doctor.disk.title": "저장 공간이 부족해요",
+  "doctor.disk.advice": "컴퓨터의 저장 공간을 조금 비운 뒤 다시 시도해 주세요.",
+  "doctor.generic.title": "문제가 생겼어요",
+  "doctor.generic.advice": "다시 시도하면 대부분 해결돼요. 계속 안 되면 아래 '자세한 내용'을 복사해서 도움을 받아보세요.",
 } as const;
 
 export type MessageKey = keyof typeof ko;
