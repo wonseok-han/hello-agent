@@ -18,7 +18,7 @@
 
 ## 핵심 결정·발견 (고정 — 재조사 방지)
 
-- **마일스톤**: M0(기술 검증)·M1(해피패스 위저드) 완료, M2(개념·안전) 대부분 완료. M3(닥터)·정식 배포 남음
+- **마일스톤**: M0·M1·M2 완료, M3(닥터) MVP 완료. 남음: 백엔드 에러 i18n 마무리, macOS/Windows 실기기 설치 검증, 정식 배포(코드 서명)
 - **PATH**: macOS/Windows 인스톨러 둘 다 PATH를 스스로 등록 안 함 → `ensure_path`가 직접(`~/.zshrc` / Windows 사용자 PATH 레지스트리). 위저드는 절대경로 실행이라 PATH 비의존
 - **로그인 자동 감지**: 브라우저 세션이 있으면 확인 코드 없이 자동 승인으로 끝나는 경로가 있어, 대기 중 `auth status` 폴링으로 완료를 잡는다
 - **설치 방식**: 클로드 = 공식 install.sh/ps1, 코덱스 = GitHub 릴리즈 tar.gz
@@ -29,6 +29,9 @@
 - **스코프**: Codex는 원래 2단계였으나 조기 편입(2026-07-16). Gemini 등 추가는 여전히 2단계
 - **UI**: Pretendard + 중성 배경 + 코랄 액센트. 갈색 종이 콘셉트는 사용자가 반려함
 - **소개 웹사이트**: 데스크톱 앱과 배포 단위를 분리해 `website/`에서 관리. Vinext + OpenAI Sites 기반의 한국어 정적 랜딩 페이지
+- **i18n**: 라이브러리 없이 경량 자체 방식(`src/i18n.tsx` Context/훅 + `src/locales/{ko,en}.ts`). 헤더 언어 토글, 시스템 언어 초기값 + localStorage. 이름 `Hello, Agent`는 언어 무관 고정, UI 문구만 전환. 새 문구는 ko/en 양쪽에 키를 추가해야 함(en은 `Record<MessageKey,string>`으로 누락 시 컴파일 에러)
+- **백엔드 에러 i18n 미완**: Rust 에러 메시지가 한국어 하드코딩 → 영어 모드에서 원시 텍스트는 한국어로 남음. 닥터(`src/doctor.ts` 프론트 패턴 해석)가 초보자 문구는 영어로 덮지만, "자세한 내용"의 원시 로그는 그대로. 완전 대응은 백엔드 에러 구조화(kind+detail) 필요
+- **닥터**: 에러·로그를 프론트에서 정규식 패턴 매칭해 network/checksum/notfound/permission/disk로 분류(+generic 폴백), i18n 문구로 표시 + 재시도. 설치·졸업식 단계에 적용(로그인 단계는 미적용)
 
 ## 작업 규칙 (고정)
 
@@ -41,6 +44,18 @@
 ---
 
 ## 워크로그 (최신이 위)
+
+### 2026-07-21 · by Claude Opus 4.8
+
+**한 일**
+- 경량 i18n(한/영) 도입 — react-i18next 없이 자체 Context/훅(`useI18n`), `locales/{ko,en}.ts` 리소스 분리, 헤더 언어 토글, 시스템 언어 초기값 + localStorage 저장. 실기기 영어 렌더링 확인
+- M3 닥터 MVP — 에러·로그를 프론트에서 패턴 해석해 초보자용 원인·해결책을 i18n으로 표시 + 재시도(`DoctorCard`, `src/doctor.ts`). network/checksum/notfound/permission/disk 분류, 설치·졸업식 단계 적용, 패턴 매칭 6/6 검증
+
+**다음 할 일**
+- [ ] 로그인 단계에도 닥터 적용(네트워크 에러) — 현재 설치·졸업식만
+- [ ] 백엔드 에러 i18n — Rust 에러 한국어 하드코딩, 영어 모드 "자세한 내용" 원문은 한국어. 완전 대응은 에러 구조화 필요
+- [ ] macOS `.dmg` / Windows 실기기 설치 테스트
+- [ ] 정식 배포 — 코드 서명, Intel용 universal 빌드
 
 ### 2026-07-21 · by GPT-5 Codex
 
