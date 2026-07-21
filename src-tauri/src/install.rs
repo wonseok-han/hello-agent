@@ -98,9 +98,9 @@ fn install_via_vendor_script(
     std::fs::create_dir_all(&script_dir)
         .map_err(|e| format!("설치 준비 폴더를 만들지 못했어요: {e}"))?;
     let (url, script_name) = if cfg!(windows) {
-        (CLAUDE_SCRIPT_URL_WINDOWS, "agent-starter-install.ps1")
+        (CLAUDE_SCRIPT_URL_WINDOWS, "hello-agent-install.ps1")
     } else {
-        (CLAUDE_SCRIPT_URL_UNIX, "agent-starter-install.sh")
+        (CLAUDE_SCRIPT_URL_UNIX, "hello-agent-install.sh")
     };
     let script = script_dir.join(script_name);
     let status = crate::detect::command(&curl_path())
@@ -141,7 +141,7 @@ fn install_via_github_tarball(
     phase("download");
     let target = codex_target()?;
     let url = format!("{CODEX_RELEASE_BASE}/codex-{target}.tar.gz");
-    let cache = home.join(".cache").join("agent-starter");
+    let cache = home.join(".cache").join("hello-agent");
     std::fs::create_dir_all(&cache)
         .map_err(|e| format!("설치 준비 폴더를 만들지 못했어요: {e}"))?;
     let tarball = cache.join("codex.tar.gz");
@@ -328,7 +328,7 @@ fn ensure_path(home: &Path) -> Result<Option<String>, String> {
         }
     }
     let zshrc = home.join(".zshrc");
-    let snippet = "\n# agent-starter가 추가함: 터미널에서 코딩 에이전트를 찾을 수 있게 하는 설정\nexport PATH=\"$HOME/.local/bin:$PATH\"\n";
+    let snippet = "\n# Hello, Agent가 추가함: 터미널에서 코딩 에이전트를 찾을 수 있게 하는 설정\nexport PATH=\"$HOME/.local/bin:$PATH\"\n";
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
         .create(true)
@@ -376,7 +376,7 @@ mod tests {
 
     fn isolated_install(agent: Agent, tag: &str) -> (PathBuf, InstallResult) {
         let home = std::env::temp_dir().join(format!(
-            "agent-starter-{tag}-{}",
+            "hello-agent-{tag}-{}",
             std::process::id()
         ));
         std::fs::create_dir_all(&home).unwrap();

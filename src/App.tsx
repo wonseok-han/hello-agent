@@ -123,7 +123,7 @@ function App() {
     <div className="app">
       <header className="header">
         <p className="eyebrow">코딩 에이전트 시작 도우미</p>
-        <h1>Agent Starter</h1>
+        <h1>Hello, Agent</h1>
         <p className="tagline">
           코딩 에이전트를 쓸 수 있는 상태까지, 차근차근 같이 갈게요.
         </p>

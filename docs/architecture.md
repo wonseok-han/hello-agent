@@ -1,4 +1,4 @@
-# agent-starter 기술 설계
+# Hello, Agent 기술 설계
 
 > 대상 독자: 이 프로젝트에 기여하는 개발자. 제품 배경·시장 조사는 기획 문서(Obsidian) 참고.
 > 다이어그램: [시스템 구성](diagrams/architecture.excalidraw) · [위저드 플로우](diagrams/wizard-flow.excalidraw)

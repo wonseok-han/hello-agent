@@ -37,7 +37,7 @@ const CLAUDE_SAFE_SETTINGS: &str = r#"{
 
 /// 코덱스 전역 안전 프리셋 — 확인 없는 명령 실행 금지 + 작업 폴더 밖 쓰기 차단.
 /// 사용자가 이미 설정 파일을 갖고 있으면 절대 건드리지 않는다.
-const CODEX_SAFE_CONFIG: &str = "# agent-starter가 만든 초보자 안전 설정
+const CODEX_SAFE_CONFIG: &str = "# Hello, Agent가 만든 초보자 안전 설정
 approval_policy = \"untrusted\"
 sandbox_mode = \"workspace-write\"
 ";
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn create_claude_project_with_safety_preset() {
-        let name = format!("agent-starter-테스트-{}", std::process::id());
+        let name = format!("hello-agent-테스트-{}", std::process::id());
         let info = create(Agent::ClaudeCode, Some(name.clone())).unwrap();
         let dir = std::path::PathBuf::from(&info.path);
         assert!(info.created);
@@ -207,7 +207,7 @@ mod tests {
     #[test]
     #[ignore = "claude 로그인 + 사용량 소모"]
     fn first_chat_on_this_machine() {
-        let home = std::env::temp_dir().join(format!("agent-starter-chat-{}", std::process::id()));
+        let home = std::env::temp_dir().join(format!("hello-agent-chat-{}", std::process::id()));
         std::fs::create_dir_all(&home).unwrap();
         let reply = tauri::async_runtime::block_on(run_first_chat(
             "claude-code".into(),

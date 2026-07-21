@@ -1,8 +1,8 @@
-# Agent Starter
+# Hello, Agent
 
 > 터미널을 한 번도 안 열어본 사람을 **코딩 에이전트가 굴러가는 상태까지** 데려다주는 데스크톱 앱
 
-[![CI](https://github.com/wonseok-han/agent-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/wonseok-han/agent-starter/actions/workflows/ci.yml)
+[![CI](https://github.com/wonseok-han/hello-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/wonseok-han/hello-agent/actions/workflows/ci.yml)
 
 코딩 에이전트(클로드 코드, 코덱스)를 쓰고 싶지만 **설치·설정 단계에서 막히는** 비개발자를 위한 도우미예요. 검은 터미널 창을 열 필요 없이, 버튼을 따라 누르기만 하면 첫 대화까지 도달합니다.
 
@@ -27,7 +27,7 @@
 
 ## 왜 필요한가요
 
-초보자의 코딩 에이전트 첫 사용은 실제로 40분 이상 걸리고, 대부분 **터미널 공포·PATH 문제·개념 혼란·에러 복구 불가**에서 이탈합니다. 시중엔 설치 가이드 글은 많아도 *도구*는 없었어요. Agent Starter는 그 공백을 채우는, "이 앱 하나 받아서 실행해"로 끝나는 물건을 목표로 합니다.
+초보자의 코딩 에이전트 첫 사용은 실제로 40분 이상 걸리고, 대부분 **터미널 공포·PATH 문제·개념 혼란·에러 복구 불가**에서 이탈합니다. 시중엔 설치 가이드 글은 많아도 *도구*는 없었어요. Hello, Agent는 그 공백을 채우는, "이 앱 하나 받아서 실행해"로 끝나는 물건을 목표로 합니다.
 
 ## 개발
 
