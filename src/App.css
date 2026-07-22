@@ -762,6 +762,111 @@ button.link.recheck {
   }
 }
 
+/* ── 홈베이스 ─────────────────────────────────────── */
+
+.home-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.home-head h2 {
+  margin: 0 0 4px;
+}
+
+.home-head .muted {
+  margin: 0;
+}
+
+.home-head button.primary {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.home-empty {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.project-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.project-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.project-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.project-info strong {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.project-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.project-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.project-actions button.primary {
+  padding: 8px 18px;
+  font-size: 13.5px;
+}
+
+.project-actions button.link {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.home-link {
+  margin-top: 20px;
+  font-size: 13px;
+}
+
 /* ── 닥터 (에러 진단) ─────────────────────────────── */
 
 .doctor {

@@ -135,6 +135,18 @@ export const ko = {
   "plan.team": "Team 요금제",
   "plan.enterprise": "Enterprise 요금제",
 
+  "home.title": "내 프로젝트",
+  "home.subtitle": "이어서 작업하거나, 새로 시작해요.",
+  "home.new": "+ 새 프로젝트 시작",
+  "home.doctor": "문제 해결하기",
+  "home.open": "열기",
+  "home.remove": "목록에서 지우기",
+  "home.agent.claude-code": "클로드 코드",
+  "home.agent.codex": "코덱스",
+  "home.empty": "아직 만든 프로젝트가 없어요.",
+  "home.lastOpened": "최근 사용: {when}",
+  "home.opening": "여는 중…",
+
   "doctor.badge": "무엇이 문제일까요?",
   "doctor.retry": "다시 시도",
   "doctor.details": "자세한 내용 보기",

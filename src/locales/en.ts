@@ -136,6 +136,18 @@ export const en: Record<MessageKey, string> = {
   "plan.team": "Team plan",
   "plan.enterprise": "Enterprise plan",
 
+  "home.title": "My projects",
+  "home.subtitle": "Pick up where you left off, or start fresh.",
+  "home.new": "+ Start a new project",
+  "home.doctor": "Fix a problem",
+  "home.open": "Open",
+  "home.remove": "Remove from list",
+  "home.agent.claude-code": "Claude Code",
+  "home.agent.codex": "Codex",
+  "home.empty": "You haven't made any projects yet.",
+  "home.lastOpened": "Last opened: {when}",
+  "home.opening": "Opening…",
+
   "doctor.badge": "What went wrong?",
   "doctor.retry": "Try again",
   "doctor.details": "Show details",

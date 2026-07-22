@@ -3,6 +3,13 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { useI18n } from "./i18n";
 import { diagnoseError, toAppError, type AppError } from "./doctor";
+import {
+  listProjects,
+  saveProject,
+  touchProject,
+  removeProject,
+  type SavedProject,
+} from "./store";
 import type { MessageKey } from "./locales/ko";
 import "./App.css";
 
@@ -124,18 +131,46 @@ function DoctorCard({
   );
 }
 
+type View = "loading" | "home" | "wizard";
+
 function App() {
   const { t, lang, setLang } = useI18n();
+  const [view, setView] = useState<View>("loading");
+  const [projects, setProjects] = useState<SavedProject[]>([]);
   const [step, setStep] = useState(0);
   const [agent, setAgent] = useState<AgentId | null>(null);
   const [report, setReport] = useState<EnvironmentReport | null>(null);
   const [project, setProject] = useState<ProjectInfo | null>(null);
+
+  // 앱 실행: 저장된 프로젝트가 있으면 홈, 없으면 첫 온보딩 위저드
+  async function refreshHome() {
+    const list = await listProjects();
+    setProjects(list);
+    setView(list.length > 0 ? "home" : "wizard");
+  }
+  useEffect(() => {
+    refreshHome();
+  }, []);
 
   function selectAgent(id: AgentId) {
     setAgent(id);
     setReport(null);
     setProject(null);
     setStep(1);
+  }
+
+  function startWizard() {
+    setAgent(null);
+    setReport(null);
+    setProject(null);
+    setStep(0);
+    setView("wizard");
+  }
+
+  async function goHome() {
+    const list = await listProjects();
+    setProjects(list);
+    setView("home");
   }
 
   // 배포 빌드에서 웹뷰 우클릭 메뉴를 막는다(입력창은 붙여넣기 위해 예외).
@@ -173,44 +208,146 @@ function App() {
         <p className="tagline">{t("app.tagline")}</p>
       </header>
 
-      <ol className="steps">
-        {STEP_KEYS.map((key, i) => (
-          <li
-            key={key}
-            className={i === step ? "active" : i < step ? "done" : ""}
-          >
-            <span className="step-dot">{i < step ? "✓" : i + 1}</span>
-            {t(`steps.${key}` as MessageKey)}
-          </li>
-        ))}
-      </ol>
+      {view === "loading" ? (
+        <main className="panel" />
+      ) : view === "home" ? (
+        <HomeView
+          projects={projects}
+          onNew={startWizard}
+          onChanged={refreshHome}
+        />
+      ) : (
+        <>
+          <ol className="steps">
+            {STEP_KEYS.map((key, i) => (
+              <li
+                key={key}
+                className={i === step ? "active" : i < step ? "done" : ""}
+              >
+                <span className="step-dot">{i < step ? "✓" : i + 1}</span>
+                {t(`steps.${key}` as MessageKey)}
+              </li>
+            ))}
+          </ol>
 
-      <main className="panel" key={step}>
-        {step === 0 || !agent ? (
-          <AgentStep selected={agent} onSelect={selectAgent} />
-        ) : step === 1 ? (
-          <DiagnosisStep
-            agent={agent}
-            report={report}
-            onReport={setReport}
-            onNext={() => setStep(2)}
-          />
-        ) : step === 2 ? (
-          <InstallStep agent={agent} report={report} onNext={() => setStep(3)} />
-        ) : step === 3 ? (
-          <LoginStep agent={agent} onNext={() => setStep(4)} />
-        ) : step === 4 ? (
-          <ProjectStep
-            agent={agent}
-            project={project}
-            onProject={setProject}
-            onNext={() => setStep(5)}
-          />
-        ) : (
-          <GraduationStep agent={agent} project={project} />
-        )}
-      </main>
+          <main className="panel" key={step}>
+            {step === 0 || !agent ? (
+              <AgentStep selected={agent} onSelect={selectAgent} />
+            ) : step === 1 ? (
+              <DiagnosisStep
+                agent={agent}
+                report={report}
+                onReport={setReport}
+                onNext={() => setStep(2)}
+              />
+            ) : step === 2 ? (
+              <InstallStep
+                agent={agent}
+                report={report}
+                onNext={() => setStep(3)}
+              />
+            ) : step === 3 ? (
+              <LoginStep agent={agent} onNext={() => setStep(4)} />
+            ) : step === 4 ? (
+              <ProjectStep
+                agent={agent}
+                project={project}
+                onProject={setProject}
+                onNext={() => setStep(5)}
+              />
+            ) : (
+              <GraduationStep
+                agent={agent}
+                project={project}
+                onHome={goHome}
+              />
+            )}
+          </main>
+        </>
+      )}
     </div>
+  );
+}
+
+function HomeView({
+  projects,
+  onNew,
+  onChanged,
+}: {
+  projects: SavedProject[];
+  onNew: () => void;
+  onChanged: () => void;
+}) {
+  const { t, lang } = useI18n();
+  const [opening, setOpening] = useState<string | null>(null);
+
+  async function open(p: SavedProject) {
+    setOpening(p.path);
+    try {
+      await openPath(p.path);
+      await touchProject(p.path);
+      onChanged();
+    } catch {
+      // 폴더가 지워졌을 수 있음 — 목록 갱신으로 사용자에게 노출
+      onChanged();
+    } finally {
+      setOpening(null);
+    }
+  }
+
+  async function remove(p: SavedProject) {
+    await removeProject(p.path);
+    onChanged();
+  }
+
+  const fmtWhen = (ts: number) =>
+    new Intl.DateTimeFormat(lang === "ko" ? "ko-KR" : "en-US", {
+      dateStyle: "medium",
+    }).format(ts);
+
+  return (
+    <main className="panel">
+      <div className="home-head">
+        <div>
+          <h2>{t("home.title")}</h2>
+          <p className="muted">{t("home.subtitle")}</p>
+        </div>
+        <button className="primary" onClick={onNew}>
+          {t("home.new")}
+        </button>
+      </div>
+
+      {projects.length === 0 ? (
+        <p className="muted home-empty">{t("home.empty")}</p>
+      ) : (
+        <ul className="project-list">
+          {projects.map((p) => (
+            <li key={p.path} className="project-card">
+              <div className="project-info">
+                <strong>{p.name}</strong>
+                <span className="project-meta">
+                  {t(`home.agent.${p.agent}` as MessageKey)} ·{" "}
+                  {t("home.lastOpened", { when: fmtWhen(p.lastOpenedAt) })}
+                </span>
+                <code className="project-path">{p.path}</code>
+              </div>
+              <div className="project-actions">
+                <button
+                  className="primary"
+                  onClick={() => open(p)}
+                  disabled={opening !== null}
+                >
+                  {opening === p.path ? t("home.opening") : t("home.open")}
+                </button>
+                <button className="link" onClick={() => remove(p)}>
+                  {t("home.remove")}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
   );
 }
 
@@ -740,9 +877,12 @@ function ProjectStep({
     setCreating(true);
     setError(null);
     try {
-      onProject(
-        await invoke<ProjectInfo>("create_first_project", { agent, name }),
-      );
+      const info = await invoke<ProjectInfo>("create_first_project", {
+        agent,
+        name,
+      });
+      await saveProject({ path: info.path, agent, name });
+      onProject(info);
     } catch (e) {
       setError(toAppError(e).detail);
     } finally {
@@ -795,9 +935,11 @@ function ProjectStep({
 function GraduationStep({
   agent,
   project,
+  onHome,
 }: {
   agent: AgentId;
   project: ProjectInfo | null;
+  onHome: () => void;
 }) {
   const { t } = useI18n();
   const [running, setRunning] = useState(false);
@@ -924,6 +1066,10 @@ function GraduationStep({
           )}
           <p className="hint">{t("grad.reopen")}</p>
         </div>
+
+        <button className="link home-link" onClick={onHome}>
+          {t("home.title")} →
+        </button>
       </div>
     );
   }
