@@ -143,6 +143,7 @@ export const en: Record<MessageKey, string> = {
   "home.open": "Open",
   "home.base.label": "Looking in this folder:",
   "home.base.change": "Change folder",
+  "home.base.chooseAnother": "Choose another folder",
   "home.agent.claude-code": "Claude Code",
   "home.agent.codex": "Codex",
   "home.empty": "You haven't made any projects yet.",
@@ -175,4 +176,3 @@ export const en: Record<MessageKey, string> = {
   "doctor.generic.title": "Something went wrong",
   "doctor.generic.advice": "Trying again usually fixes it. If it keeps failing, copy the details below to get help.",
 };
-

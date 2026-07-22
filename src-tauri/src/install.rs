@@ -336,7 +336,7 @@ fn ensure_path(home: &Path) -> Result<Option<String>, AppError> {
         }
     }
     let zshrc = home.join(".zshrc");
-    let snippet = "\n# Hello, Agent가 추가함: 터미널에서 코딩 에이전트를 찾을 수 있게 하는 설정\nexport PATH=\"$HOME/.local/bin:$PATH\"\n";
+    let snippet = "\n# Added by Hello, Agent so coding agents are available in the terminal\nexport PATH=\"$HOME/.local/bin:$PATH\"\n";
     use std::io::Write;
     let mut f = std::fs::OpenOptions::new()
         .create(true)
@@ -371,7 +371,7 @@ fn ensure_path(home: &Path) -> Result<Option<String>, AppError> {
     }
     let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
     Ok(if text == "updated" {
-        Some("사용자 PATH (레지스트리)".into())
+        Some("user PATH registry".into())
     } else {
         None
     })

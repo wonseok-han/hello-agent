@@ -50,12 +50,12 @@ fn query_status(agent: Agent, bin: &std::path::Path) -> Result<LoginStatus, Stri
         .args(agent.status_args())
         .stdin(Stdio::null())
         .output()
-        .map_err(|e| format!("로그인 상태를 확인하지 못했어요: {e}"))?;
+        .map_err(|e| format!("cannot check sign-in status: {e}"))?;
     let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
 
     match agent {
         Agent::ClaudeCode => serde_json::from_str(&text)
-            .map_err(|_| "로그인 상태 응답을 이해하지 못했어요.".to_string()),
+            .map_err(|e| format!("cannot parse Claude sign-in status response: {e}")),
         // codex는 JSON이 없으므로 종료 코드와 텍스트로 판정
         Agent::Codex => Ok(LoginStatus {
             logged_in: out.status.success(),

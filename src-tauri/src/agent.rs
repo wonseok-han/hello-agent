@@ -13,7 +13,7 @@ impl Agent {
         match id {
             "claude-code" => Ok(Agent::ClaudeCode),
             "codex" => Ok(Agent::Codex),
-            _ => Err(format!("모르는 에이전트예요: {id}")),
+            _ => Err(format!("unknown agent id: {id}")),
         }
     }
 

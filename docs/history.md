@@ -18,7 +18,7 @@
 
 ## 핵심 결정·발견 (고정 — 재조사 방지)
 
-- **마일스톤**: M0·M1·M2 완료, M3(닥터) MVP 완료. 홈베이스·프로젝트 디스크 스캔·에이전트 상태/업데이트까지 구현. 남음: 전체 실패 경로 닥터 적용, 콘텐츠/원시 오류 i18n 마무리, macOS/Windows 출시 후보 실기기 검증, 정식 배포(코드 서명)
+- **마일스톤**: M0~M3, 홈베이스·프로젝트 디스크 스캔·에이전트 상태/업데이트, 주요 실패 경로 닥터, 한·영 콘텐츠까지 구현. 남음: 실제 실패 경로와 macOS/Windows 출시 후보 실기기 검증, 정식 배포(코드 서명)
 - **PATH**: macOS/Windows 인스톨러 둘 다 PATH를 스스로 등록 안 함 → `ensure_path`가 직접(`~/.zshrc` / Windows 사용자 PATH 레지스트리). 위저드는 절대경로 실행이라 PATH 비의존
 - **로그인 자동 감지**: 브라우저 세션이 있으면 확인 코드 없이 자동 승인으로 끝나는 경로가 있어, 대기 중 `auth status` 폴링으로 완료를 잡는다
 - **설치 방식**: 클로드 = 공식 install.sh/ps1, 코덱스 = GitHub 릴리즈 tar.gz
@@ -31,8 +31,8 @@
 - **소개 웹사이트**: 데스크톱 앱과 배포 단위를 분리해 `website/`에서 관리. Vinext + OpenAI Sites 기반의 한국어 정적 랜딩 페이지. 온보딩 6단계뿐 아니라 프로젝트 자동 발견·에이전트 상태·업데이트를 관리하는 재방문 홈베이스도 핵심 가치로 소개
 - **브랜드 마크**: `brand/hello-agent-mark.svg`가 정식 원본. 코랄 타일 + 흰 대화선 형태이며 웹 파비콘과 Tauri macOS·Windows 앱 아이콘을 동일 원본에서 생성
 - **i18n**: 라이브러리 없이 경량 자체 방식(`src/i18n.tsx` Context/훅 + `src/locales/{ko,en}.ts`). 헤더 언어 토글, 시스템 언어 초기값 + localStorage. 이름 `Hello, Agent`는 언어 무관 고정, UI 문구만 전환. 새 문구는 ko/en 양쪽에 키를 추가해야 함(en은 `Record<MessageKey,string>`으로 누락 시 컴파일 에러)
-- **백엔드 에러 구조화 완료, i18n 일부 남음**: `AppError { kind, detail }`와 `ErrorKind` 도입 완료. 다만 `project.rs`·`login.rs`·`editor.rs` 일부 상세 오류와 첫 대화 프롬프트가 한국어 하드코딩이라 영어 UI에서 혼용 가능
-- **닥터 적용 범위**: 구조화 오류를 network/checksum/notfound/permission/disk/generic으로 해석해 i18n 문구와 재시도를 제공. 현재 설치·졸업식에 적용됐고 진단·로그인·홈의 설정/업데이트 실패에는 아직 미적용
+- **오류/i18n 경계**: Rust 오류는 `AppError { kind, detail }`로 구조화하고 상세 기술 오류는 영어로 통일. 초보자용 설명은 프론트 i18n에서 표시. 프로젝트 안전 안내와 첫 대화 프롬프트도 선택 언어를 Rust로 전달해 한·영 생성
+- **닥터 적용 범위**: 구조화 오류를 network/checksum/notfound/permission/disk/generic으로 해석해 i18n 문구와 재시도를 제공. 진단·설치·로그인·프로젝트 생성·첫 대화와 홈의 상태/업데이트·프로젝트 스캔 실패에 적용
 - **홈베이스**: 프로젝트가 있거나 설치·로그인된 에이전트가 있으면 홈으로 진입. 기준 폴더 바로 아래에서 `.claude`/`CLAUDE.md`/`AGENTS.md` 표식을 스캔하고, 에이전트 상태와 업데이트를 표시
 
 ## 작업 규칙 (고정)
@@ -47,6 +47,29 @@
 ---
 
 ## 워크로그 (최신이 위)
+
+### 2026-07-22 · by GPT-5 Codex
+
+**한 일 — 홈베이스와 오류 복구 흐름 보완**
+- 진단·로그인·프로젝트 생성의 원시 오류 표시를 `DoctorCard`로 교체하고 재시도 제공
+- 홈의 에이전트 상태 확인·업데이트 실패도 설정 화면 이동 대신 인라인 닥터로 원인과 재시도 표시
+- 기준 폴더가 없거나 읽을 수 없을 때 빈 프로젝트 목록으로 숨기지 않고 닥터·재시도·다른 폴더 선택 제공
+- 준비된 에이전트가 하나면 홈의 `새 프로젝트`에서 프로젝트 단계로 직행하고, 둘 다 준비됐으면 선택 후 직행
+- 선택 언어를 프로젝트 생성과 첫 대화 명령에 전달해 `CLAUDE.md`/`AGENTS.md` 초보자 안내, Codex 안전 설정 주석, 첫 환영 인사를 한·영으로 생성
+- `agent.rs`·`login.rs`·`editor.rs`·`project.rs`의 사용자에게 노출될 수 있는 기술 오류를 영어 상세 정보로 통일
+- pnpm 11에서 무시되는 `package.json`의 중복 `onlyBuiltDependencies`를 제거하고 기존 `pnpm-workspace.yaml`의 `allowBuilds`만 사용
+- README와 기술 설계를 실제 홈 진입·스캔·영속성·i18n 동작에 맞게 갱신
+
+**검증**
+- `pnpm build` 통과
+- `cargo test --manifest-path src-tauri/Cargo.toml`: 15 passed, 0 failed, 6 ignored
+- `pnpm tauri build --debug --bundles app` 통과, macOS `Hello Agent.app` 번들 생성
+- 언어별 초보자 안내 생성과 존재하지 않는 기준 폴더 오류 분류 테스트 추가
+
+**다음 할 일**
+- [ ] 네트워크 단절·권한 오류·잘못된 기준 폴더를 실기기에서 만들어 닥터 UI 확인
+- [ ] 깨끗한 macOS 계정과 Windows 기기에서 출시 후보 전체 흐름 검증
+- [ ] 코드 서명·배포 방식 결정 후 첫 베타 릴리스
 
 ### 2026-07-22 · by GPT-5 Codex
 

@@ -792,8 +792,12 @@ button.link.recheck {
   padding: 8px 0;
 }
 
-.agent-row + .agent-row {
+.agent-row-block + .agent-row-block {
   border-top: 1px solid var(--line);
+}
+
+.agent-row-block > .doctor {
+  margin: 4px 0 10px;
 }
 
 .agent-row-info {
@@ -886,6 +890,17 @@ button.small {
 .home-empty {
   text-align: center;
   padding: 40px 0;
+}
+
+.home-scan-error {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.home-scan-error > button {
+  align-self: center;
 }
 
 .project-list {

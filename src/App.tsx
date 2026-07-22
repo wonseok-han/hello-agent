@@ -77,20 +77,16 @@ interface HomeProject extends ScannedProject {
 
 // 기준 폴더를 스캔해 프로젝트 목록을 만들고, store의 최근 사용 시각으로 정렬한다.
 async function loadHomeProjects(base: string): Promise<HomeProject[]> {
-  try {
-    const [scanned, last] = await Promise.all([
-      invoke<ScannedProject[]>("scan_projects", { base }),
-      lastOpenedMap(),
-    ]);
-    return scanned
-      .map((s) => ({ ...s, lastOpenedAt: last[s.path] ?? 0 }))
-      .sort(
-        (a, b) =>
-          b.lastOpenedAt - a.lastOpenedAt || a.name.localeCompare(b.name),
-      );
-  } catch {
-    return [];
-  }
+  const [scanned, last] = await Promise.all([
+    invoke<ScannedProject[]>("scan_projects", { base }),
+    lastOpenedMap(),
+  ]);
+  return scanned
+    .map((s) => ({ ...s, lastOpenedAt: last[s.path] ?? 0 }))
+    .sort(
+      (a, b) =>
+        b.lastOpenedAt - a.lastOpenedAt || a.name.localeCompare(b.name),
+    );
 }
 
 async function openDirectoryDialog(): Promise<string | null> {
@@ -104,17 +100,21 @@ async function openDirectoryDialog(): Promise<string | null> {
 
 const shortVersion = (v: string | null) => v?.split(" ")[0] ?? "";
 
-// 하나라도 설치·로그인된 에이전트가 있으면 홈으로 갈 자격(온보딩 불필요)
-async function isAnyAgentReady(): Promise<boolean> {
+// 설치·로그인까지 끝난 에이전트 목록. 홈 진입과 새 프로젝트 단축에 함께 쓴다.
+async function getReadyAgents(): Promise<AgentId[]> {
   try {
+    const ids: AgentId[] = ["claude-code", "codex"];
     const results = await Promise.all(
-      (["claude-code", "codex"] as AgentId[]).map((id) =>
+      ids.map((id) =>
         invoke<AgentStatus>("agent_status", { agent: id }).catch(() => null),
       ),
     );
-    return results.some((s) => s?.installed && s.loggedIn);
+    return ids.filter((_, index) => {
+      const status = results[index];
+      return status?.installed && status.loggedIn;
+    });
   } catch {
-    return false;
+    return [];
   }
 }
 
@@ -209,6 +209,8 @@ function App() {
   const [view, setView] = useState<View>("loading");
   const [projects, setProjects] = useState<HomeProject[]>([]);
   const [baseDir, setBaseDirState] = useState<string>("");
+  const [scanError, setScanError] = useState<AppError | null>(null);
+  const [readyAgents, setReadyAgents] = useState<AgentId[]>([]);
   const [step, setStep] = useState(0);
   const [agent, setAgent] = useState<AgentId | null>(null);
   const [report, setReport] = useState<EnvironmentReport | null>(null);
@@ -220,13 +222,22 @@ function App() {
     let base = await getBaseDir();
     if (!base) base = await invoke<string>("default_projects_dir");
     setBaseDirState(base);
-    const list = await loadHomeProjects(base);
+    let list: HomeProject[] = [];
+    let nextScanError: AppError | null = null;
+    try {
+      list = await loadHomeProjects(base);
+    } catch (error) {
+      nextScanError = toAppError(error);
+    }
+    const nextReadyAgents = await getReadyAgents();
     setProjects(list);
-    if (list.length > 0) {
+    setScanError(nextScanError);
+    setReadyAgents(nextReadyAgents);
+    if (list.length > 0 || nextReadyAgents.length > 0 || nextScanError) {
       setView("home");
       return;
     }
-    setView((await isAnyAgentReady()) ? "home" : "wizard");
+    setView("wizard");
   }
   useEffect(() => {
     refreshHome();
@@ -244,14 +255,16 @@ function App() {
     setAgent(id);
     setReport(null);
     setProject(null);
-    setStep(1);
+    setStep(readyAgents.includes(id) ? 4 : 1);
   }
 
   function startWizard() {
-    setAgent(null);
+    const onlyReadyAgent = readyAgents.length === 1 ? readyAgents[0] : null;
+    setAgent(onlyReadyAgent);
     setReport(null);
     setProject(null);
-    setStep(0);
+    // 준비된 에이전트가 하나면 진단·설치·로그인을 다시 거치지 않고 프로젝트로.
+    setStep(onlyReadyAgent ? 4 : 0);
     setView("wizard");
   }
 
@@ -310,10 +323,12 @@ function App() {
         <HomeView
           projects={projects}
           baseDir={baseDir}
+          scanError={scanError}
           onNew={startWizard}
           onSetupAgent={setupAgent}
           onChangeBase={changeBaseDir}
           onChanged={refreshHome}
+          onRetryScan={refreshHome}
         />
       ) : (
         <>
@@ -374,9 +389,12 @@ function AgentRow({ id, onSetup }: { id: AgentId; onSetup: () => void }) {
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [latest, setLatest] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState<AppError | null>(null);
   const name = t(`agent.${id}.name` as MessageKey);
 
   async function refresh() {
+    setError(null);
+    setLatest(null);
     try {
       const s = await invoke<AgentStatus>("agent_status", { agent: id });
       setStatus(s);
@@ -386,8 +404,9 @@ function AgentRow({ id, onSetup }: { id: AgentId; onSetup: () => void }) {
           .then((v) => setLatest(v))
           .catch(() => {});
       }
-    } catch {
-      setStatus({ installed: false, version: null, loggedIn: false, path: null });
+    } catch (caught) {
+      setStatus(null);
+      setError(toAppError(caught));
     }
   }
 
@@ -398,14 +417,14 @@ function AgentRow({ id, onSetup }: { id: AgentId; onSetup: () => void }) {
 
   async function update() {
     setUpdating(true);
+    setError(null);
     const onEvent = new Channel();
     try {
       await invoke("install_agent", { agent: id, testHome: null, onEvent });
       setLatest(null);
       await refresh();
-    } catch {
-      // 실패 시 설정 화면으로 유도
-      onSetup();
+    } catch (caught) {
+      setError(toAppError(caught));
     } finally {
       setUpdating(false);
     }
@@ -441,24 +460,27 @@ function AgentRow({ id, onSetup }: { id: AgentId; onSetup: () => void }) {
   }
 
   return (
-    <div className="agent-row">
-      <div className="agent-row-info">
-        <strong>{name}</strong>
-        <span className={`agent-status ${statusClass}`}>{statusText}</span>
+    <div className="agent-row-block">
+      <div className="agent-row">
+        <div className="agent-row-info">
+          <strong>{name}</strong>
+          <span className={`agent-status ${statusClass}`}>{statusText}</span>
+        </div>
+        {status && !status.installed ? (
+          <button className="ghost small" onClick={onSetup}>
+            {t("home.agent.setup")}
+          </button>
+        ) : status && !status.loggedIn ? (
+          <button className="ghost small" onClick={onSetup}>
+            {t("home.agent.setup")}
+          </button>
+        ) : updateAvailable ? (
+          <button className="primary small" onClick={update} disabled={updating}>
+            {updating ? t("home.agent.updating") : t("home.agent.update")}
+          </button>
+        ) : null}
       </div>
-      {status && !status.installed ? (
-        <button className="ghost small" onClick={onSetup}>
-          {t("home.agent.setup")}
-        </button>
-      ) : status && !status.loggedIn ? (
-        <button className="ghost small" onClick={onSetup}>
-          {t("home.agent.setup")}
-        </button>
-      ) : updateAvailable ? (
-        <button className="primary small" onClick={update} disabled={updating}>
-          {updating ? t("home.agent.updating") : t("home.agent.update")}
-        </button>
-      ) : null}
+      {error && <DoctorCard error={error} onRetry={status ? update : refresh} />}
     </div>
   );
 }
@@ -466,17 +488,21 @@ function AgentRow({ id, onSetup }: { id: AgentId; onSetup: () => void }) {
 function HomeView({
   projects,
   baseDir,
+  scanError,
   onNew,
   onSetupAgent,
   onChangeBase,
   onChanged,
+  onRetryScan,
 }: {
   projects: HomeProject[];
   baseDir: string;
+  scanError: AppError | null;
   onNew: () => void;
   onSetupAgent: (id: AgentId) => void;
   onChangeBase: () => void;
   onChanged: () => void;
+  onRetryScan: () => void;
 }) {
   const { t, lang } = useI18n();
   const [opening, setOpening] = useState<string | null>(null);
@@ -527,7 +553,14 @@ function HomeView({
         </button>
       </div>
 
-      {projects.length === 0 ? (
+      {scanError ? (
+        <div className="home-scan-error">
+          <DoctorCard error={scanError} onRetry={onRetryScan} />
+          <button className="ghost" onClick={onChangeBase}>
+            {t("home.base.chooseAnother")}
+          </button>
+        </div>
+      ) : projects.length === 0 ? (
         <p className="muted home-empty">{t("home.empty")}</p>
       ) : (
         <ul className="project-list">
@@ -605,7 +638,7 @@ function DiagnosisStep({
 }) {
   const { t } = useI18n();
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const name = t(`agent.${agent}.name` as MessageKey);
 
   async function run() {
@@ -614,7 +647,7 @@ function DiagnosisStep({
     try {
       onReport(await invoke<EnvironmentReport>("detect_environment", { agent }));
     } catch (e) {
-      setError(toAppError(e).detail);
+      setError(toAppError(e));
     } finally {
       setRunning(false);
     }
@@ -625,10 +658,13 @@ function DiagnosisStep({
       <div className="center">
         <h2>{t("diag.intro.title")}</h2>
         <p className="muted">{t("diag.intro.desc", { name })}</p>
-        {error && <p className="error">{t("diag.error", { error })}</p>}
-        <button className="primary" onClick={run} disabled={running}>
-          {running ? t("diag.checking") : t("diag.run")}
-        </button>
+        {error ? (
+          <DoctorCard error={error} onRetry={run} retryLabel={t("diag.run")} />
+        ) : (
+          <button className="primary" onClick={run} disabled={running}>
+            {running ? t("diag.checking") : t("diag.run")}
+          </button>
+        )}
       </div>
     );
   }
@@ -848,7 +884,7 @@ function LoginStep({ agent, onNext }: { agent: AgentId; onNext: () => void }) {
   const [mode, setMode] = useState<"idle" | "waiting" | "verifying">("idle");
   const [url, setUrl] = useState<string | null>(null);
   const [code, setCode] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
   const isClaude = agent === "claude-code";
   const name = t(`agent.${agent}.name` as MessageKey);
   const service = t(isClaude ? "login.service.claude" : "login.service.codex");
@@ -859,7 +895,7 @@ function LoginStep({ agent, onNext }: { agent: AgentId; onNext: () => void }) {
       setStatus(await invoke<LoginStatus>("login_status", { agent }));
       setError(null);
     } catch (e) {
-      setError(toAppError(e).detail);
+      setError(toAppError(e));
     } finally {
       setChecking(false);
     }
@@ -907,7 +943,7 @@ function LoginStep({ agent, onNext }: { agent: AgentId; onNext: () => void }) {
     try {
       await openSession(useApiBilling);
     } catch (err) {
-      setError(toAppError(err).detail);
+      setError(toAppError(err));
       setMode("idle");
     }
   }
@@ -925,10 +961,10 @@ function LoginStep({ agent, onNext }: { agent: AgentId; onNext: () => void }) {
       setCode("");
       try {
         await openSession(false);
-        setError(t("login.codeFail"));
+        setError({ kind: "generic", detail: t("login.codeFail") });
         setMode("waiting");
       } catch (err2) {
-        setError(toAppError(err2).detail);
+        setError(toAppError(err2));
         setMode("idle");
       }
     }
@@ -997,7 +1033,7 @@ function LoginStep({ agent, onNext }: { agent: AgentId; onNext: () => void }) {
             </button>
           </p>
         )}
-        {error && <p className="error">{error}</p>}
+        {error && <DoctorCard error={error} onRetry={() => start(false)} />}
         {isClaude && (
           <div className="code-row">
             <input
@@ -1033,7 +1069,7 @@ function LoginStep({ agent, onNext }: { agent: AgentId; onNext: () => void }) {
             <p>{t("login.claude.box.desc")}</p>
           </div>
           <p className="hint">{t("login.claude.hint")}</p>
-          {error && <p className="error">{error}</p>}
+          {error && <DoctorCard error={error} onRetry={() => start(false)} />}
           <div className="actions">
             <details className="advanced">
               <summary>{t("login.claude.advanced")}</summary>
@@ -1053,7 +1089,7 @@ function LoginStep({ agent, onNext }: { agent: AgentId; onNext: () => void }) {
             <strong>{t("login.codex.box.title")}</strong>
             <p>{t("login.codex.box.desc")}</p>
           </div>
-          {error && <p className="error">{error}</p>}
+          {error && <DoctorCard error={error} onRetry={() => start(false)} />}
           <div className="actions">
             <span />
             <button className="primary" onClick={() => start(false)}>
@@ -1077,10 +1113,10 @@ function ProjectStep({
   onProject: (p: ProjectInfo) => void;
   onNext: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [name, setName] = useState("my-first-project");
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
 
   async function create() {
     setCreating(true);
@@ -1091,11 +1127,12 @@ function ProjectStep({
         agent,
         name,
         base,
+        language: lang,
       });
       await saveProject({ path: info.path, agent, name });
       onProject(info);
     } catch (e) {
-      setError(toAppError(e).detail);
+      setError(toAppError(e));
     } finally {
       setCreating(false);
     }
@@ -1122,7 +1159,7 @@ function ProjectStep({
     <div className="center">
       <h2>{t("project.make.title")}</h2>
       <p className="muted">{t("project.make.desc")}</p>
-      {error && <p className="error">{error}</p>}
+      {error && <DoctorCard error={error} onRetry={create} />}
       <div className="code-row">
         <input
           className="code-input"
@@ -1152,7 +1189,7 @@ function GraduationStep({
   project: ProjectInfo | null;
   onHome: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [running, setRunning] = useState(false);
   const [reply, setReply] = useState<string | null>(null);
   const [error, setError] = useState<AppError | null>(null);
@@ -1205,6 +1242,7 @@ function GraduationStep({
         await invoke<string>("run_first_chat", {
           agent,
           projectPath: project!.path,
+          language: lang,
         }),
       );
     } catch (e) {

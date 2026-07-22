@@ -35,11 +35,12 @@ pub async fn scan_projects(base: String) -> Result<Vec<ScannedProject>, AppError
     tauri::async_runtime::spawn_blocking(move || {
         let dir = PathBuf::from(&base);
         let mut found = Vec::new();
-        let entries = match std::fs::read_dir(&dir) {
-            Ok(e) => e,
-            // 폴더가 없거나 접근 불가면 빈 목록(홈은 "프로젝트 없음"을 보여줌)
-            Err(_) => return Ok(found),
-        };
+        let entries = std::fs::read_dir(&dir).map_err(|e| {
+            AppError::classify(format!(
+                "cannot read project base directory '{}': {e}",
+                dir.display()
+            ))
+        })?;
         for entry in entries.flatten() {
             let path = entry.path();
             if !path.is_dir() {
@@ -76,13 +77,22 @@ fn detect_project_agent(dir: &Path) -> Option<&'static str> {
 }
 
 /// 초보자 안내 프리셋: 프로젝트의 에이전트에게 사용자가 초보자임을 알린다.
-const BEGINNER_GUIDE_MD: &str = "# 내 첫 프로젝트
+const BEGINNER_GUIDE_KO: &str = "# 내 첫 프로젝트
 
 이 폴더의 주인은 코딩을 처음 해 보는 사용자예요. 함께 일할 때:
 
 - 쉬운 한국어로, 전문용어 없이 설명해 주세요.
 - 파일을 지우거나 이 폴더 밖의 것을 바꾸기 전에는 반드시 먼저 물어봐 주세요.
 - 작업을 마치면 무엇을 했는지 쉬운 말로 한 줄 정리해 주세요.
+";
+
+const BEGINNER_GUIDE_EN: &str = "# My first project
+
+The owner of this folder is new to coding. When working together:
+
+- Explain things in plain English without jargon.
+- Ask before deleting files or changing anything outside this folder.
+- When a task is complete, summarize what you changed in one simple sentence.
 ";
 
 /// 클로드 코드 프로젝트 안전 프리셋 — 민감 파일 읽기와 위험 명령을 기본 차단
@@ -101,7 +111,12 @@ const CLAUDE_SAFE_SETTINGS: &str = r#"{
 
 /// 코덱스 전역 안전 프리셋 — 확인 없는 명령 실행 금지 + 작업 폴더 밖 쓰기 차단.
 /// 사용자가 이미 설정 파일을 갖고 있으면 절대 건드리지 않는다.
-const CODEX_SAFE_CONFIG: &str = "# Hello, Agent가 만든 초보자 안전 설정
+const CODEX_SAFE_CONFIG_KO: &str = "# Hello, Agent가 만든 초보자 안전 설정
+approval_policy = \"untrusted\"
+sandbox_mode = \"workspace-write\"
+";
+
+const CODEX_SAFE_CONFIG_EN: &str = "# Beginner-safe defaults created by Hello, Agent
 approval_policy = \"untrusted\"
 sandbox_mode = \"workspace-write\"
 ";
@@ -111,26 +126,33 @@ pub async fn create_first_project(
     agent: String,
     name: Option<String>,
     base: Option<String>,
+    language: Option<String>,
 ) -> Result<ProjectInfo, AppError> {
     let agent = Agent::from_id(&agent)?;
     tauri::async_runtime::spawn_blocking(move || {
-        create(agent, name, base).map_err(AppError::classify)
+        create(agent, name, base, language).map_err(AppError::classify)
     })
     .await
     .map_err(|e| AppError::generic(e.to_string()))?
 }
 
-fn create(agent: Agent, name: Option<String>, base: Option<String>) -> Result<ProjectInfo, String> {
+fn create(
+    agent: Agent,
+    name: Option<String>,
+    base: Option<String>,
+    language: Option<String>,
+) -> Result<ProjectInfo, String> {
     let name = sanitize_name(name.as_deref().unwrap_or("my-first-project"));
     if name.is_empty() {
-        return Err("폴더 이름에 쓸 수 있는 글자가 없어요. 다른 이름을 지어 주세요.".into());
+        return Err("project folder name has no usable characters".into());
     }
     let base_dir = base.map(PathBuf::from).unwrap_or_else(documents_dir);
     let dir = base_dir.join(&name);
     let created = !dir.exists();
-    std::fs::create_dir_all(&dir).map_err(|e| format!("폴더를 만들지 못했어요: {e}"))?;
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("cannot create project folder '{}': {e}", dir.display()))?;
 
-    apply_safety_preset(agent, &dir)?;
+    apply_safety_preset(agent, &dir, language.as_deref() == Some("en"))?;
 
     Ok(ProjectInfo {
         path: dir.display().to_string(),
@@ -139,29 +161,49 @@ fn create(agent: Agent, name: Option<String>, base: Option<String>) -> Result<Pr
 }
 
 /// 에이전트별 안전 프리셋. 이미 있는 파일은 절대 덮어쓰지 않는다.
-fn apply_safety_preset(agent: Agent, dir: &Path) -> Result<(), String> {
+fn apply_safety_preset(agent: Agent, dir: &Path, english: bool) -> Result<(), String> {
     let write_if_absent = |path: PathBuf, content: &str| -> Result<(), String> {
         if path.exists() {
             return Ok(());
         }
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("설정 폴더를 만들지 못했어요: {e}"))?;
+            std::fs::create_dir_all(parent).map_err(|e| {
+                format!("cannot create settings folder '{}': {e}", parent.display())
+            })?;
         }
-        std::fs::write(&path, content).map_err(|e| format!("설정 파일을 만들지 못했어요: {e}"))
+        std::fs::write(&path, content)
+            .map_err(|e| format!("cannot write settings file '{}': {e}", path.display()))
     };
 
     match agent {
         Agent::ClaudeCode => {
-            write_if_absent(dir.join("CLAUDE.md"), BEGINNER_GUIDE_MD)?;
-            write_if_absent(dir.join(".claude").join("settings.json"), CLAUDE_SAFE_SETTINGS)?;
+            let guide = if english {
+                BEGINNER_GUIDE_EN
+            } else {
+                BEGINNER_GUIDE_KO
+            };
+            write_if_absent(dir.join("CLAUDE.md"), guide)?;
+            write_if_absent(
+                dir.join(".claude").join("settings.json"),
+                CLAUDE_SAFE_SETTINGS,
+            )?;
         }
         Agent::Codex => {
-            write_if_absent(dir.join("AGENTS.md"), BEGINNER_GUIDE_MD)?;
+            let guide = if english {
+                BEGINNER_GUIDE_EN
+            } else {
+                BEGINNER_GUIDE_KO
+            };
+            let config = if english {
+                CODEX_SAFE_CONFIG_EN
+            } else {
+                CODEX_SAFE_CONFIG_KO
+            };
+            write_if_absent(dir.join("AGENTS.md"), guide)?;
             // 코덱스의 승인 정책은 전역 설정이므로, 설정 파일이 아예 없을 때만 생성
             write_if_absent(
                 crate::detect::home_dir().join(".codex").join("config.toml"),
-                CODEX_SAFE_CONFIG,
+                config,
             )?;
         }
     }
@@ -170,7 +212,11 @@ fn apply_safety_preset(agent: Agent, dir: &Path) -> Result<(), String> {
 
 /// 프로젝트 폴더에서 비대화형으로 첫 인사를 주고받는다.
 #[tauri::command]
-pub async fn run_first_chat(agent: String, project_path: String) -> Result<String, AppError> {
+pub async fn run_first_chat(
+    agent: String,
+    project_path: String,
+    language: Option<String>,
+) -> Result<String, AppError> {
     let agent = Agent::from_id(&agent)?;
     tauri::async_runtime::spawn_blocking(move || {
         let dir = PathBuf::from(&project_path);
@@ -179,8 +225,7 @@ pub async fn run_first_chat(agent: String, project_path: String) -> Result<Strin
         }
         let bin = crate::detect::agent_bin(agent)
             .ok_or_else(|| AppError::not_found(format!("{} is not installed", agent.bin_name())))?;
-        let prompt =
-            "코딩 도우미를 처음 만나는 사용자에게 두 문장 이내의 짧고 따뜻한 한국어 환영 인사를 해 주세요.";
+        let prompt = first_chat_prompt(language.as_deref());
         let out = crate::detect::command(&bin)
             .args(agent.chat_args(prompt))
             .current_dir(&dir)
@@ -202,6 +247,14 @@ pub async fn run_first_chat(agent: String, project_path: String) -> Result<Strin
     })
     .await
     .map_err(|e| AppError::generic(e.to_string()))?
+}
+
+fn first_chat_prompt(language: Option<&str>) -> &'static str {
+    if language == Some("en") {
+        "Give a new coding-agent user a short, warm welcome in plain English using no more than two sentences."
+    } else {
+        "코딩 도우미를 처음 만나는 사용자에게 두 문장 이내의 짧고 따뜻한 한국어 환영 인사를 해 주세요."
+    }
 }
 
 /// codex exec는 응답 앞에 메타 정보 블록을 출력하므로 마지막 문단만 남긴다
@@ -251,18 +304,39 @@ mod tests {
         std::fs::create_dir_all(&base).unwrap();
         let name = format!("hello-agent-테스트-{}", std::process::id());
         let base_s = Some(base.display().to_string());
-        let info = create(Agent::ClaudeCode, Some(name.clone()), base_s.clone()).unwrap();
+        let info = create(
+            Agent::ClaudeCode,
+            Some(name.clone()),
+            base_s.clone(),
+            Some("ko".into()),
+        )
+        .unwrap();
         let dir = std::path::PathBuf::from(&info.path);
         assert!(info.created);
         assert!(dir.starts_with(&base));
         assert!(dir.join("CLAUDE.md").is_file());
-        let settings =
-            std::fs::read_to_string(dir.join(".claude").join("settings.json")).unwrap();
+        let settings = std::fs::read_to_string(dir.join(".claude").join("settings.json")).unwrap();
         assert!(settings.contains("deny"));
         serde_json::from_str::<serde_json::Value>(&settings).expect("valid json");
         // 두 번째 호출은 재사용으로 판정돼야 함
-        let again = create(Agent::ClaudeCode, Some(name), base_s).unwrap();
+        let again = create(Agent::ClaudeCode, Some(name), base_s, Some("ko".into())).unwrap();
         assert!(!again.created);
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[test]
+    fn create_project_localizes_beginner_guide() {
+        let base = std::env::temp_dir().join(format!("ha-en-base-{}", std::process::id()));
+        std::fs::create_dir_all(&base).unwrap();
+        let info = create(
+            Agent::ClaudeCode,
+            Some("english-project".into()),
+            Some(base.display().to_string()),
+            Some("en".into()),
+        )
+        .unwrap();
+        let guide = std::fs::read_to_string(PathBuf::from(info.path).join("CLAUDE.md")).unwrap();
+        assert!(guide.contains("plain English"));
         std::fs::remove_dir_all(&base).unwrap();
     }
 
@@ -293,12 +367,27 @@ mod tests {
     }
 
     #[test]
+    fn scan_reports_missing_base_directory() {
+        let missing = std::env::temp_dir().join(format!("ha-missing-{}", std::process::id()));
+        std::fs::remove_dir_all(&missing).ok();
+        let error = tauri::async_runtime::block_on(scan_projects(missing.display().to_string()))
+            .expect_err("missing base directory should be reported");
+        assert_eq!(error.kind, crate::error::ErrorKind::NotFound);
+    }
+
+    #[test]
     fn codex_reply_cleanup_keeps_last_block() {
         let raw = "[2026-07-16] OpenAI Codex v0.144.5\nworkdir: /tmp\n\ntokens used: 123\n\n안녕하세요! 만나서 반가워요.";
         assert_eq!(
             clean_reply(Agent::Codex, raw),
             "안녕하세요! 만나서 반가워요."
         );
+    }
+
+    #[test]
+    fn first_chat_prompt_follows_language() {
+        assert!(first_chat_prompt(Some("ko")).contains("한국어"));
+        assert!(first_chat_prompt(Some("en")).contains("English"));
     }
 
     /// 실제 첫 대화 실행 (사용량 소모). 실행: cargo test -- --ignored --nocapture
@@ -310,6 +399,7 @@ mod tests {
         let reply = tauri::async_runtime::block_on(run_first_chat(
             "claude-code".into(),
             home.display().to_string(),
+            Some("ko".into()),
         ))
         .unwrap();
         println!("응답: {reply}");

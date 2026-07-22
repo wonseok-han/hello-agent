@@ -187,7 +187,7 @@ fn ensure_extension(cli: &Path, ext: &str) -> Result<(), String> {
     let listed = crate::detect::command(cli)
         .arg("--list-extensions")
         .output()
-        .map_err(|e| format!("확장 목록을 확인하지 못했어요: {e}"))?;
+        .map_err(|e| format!("cannot list editor extensions: {e}"))?;
     let installed = String::from_utf8_lossy(&listed.stdout)
         .lines()
         .any(|l| l.trim().eq_ignore_ascii_case(ext));
@@ -197,11 +197,13 @@ fn ensure_extension(cli: &Path, ext: &str) -> Result<(), String> {
     let status = crate::detect::command(cli)
         .args(["--install-extension", ext, "--force"])
         .status()
-        .map_err(|e| format!("확장을 설치하지 못했어요: {e}"))?;
+        .map_err(|e| format!("cannot install editor extension '{ext}': {e}"))?;
     if status.success() {
         Ok(())
     } else {
-        Err("확장 설치에 실패했어요.".into())
+        Err(format!(
+            "editor extension installer exited unsuccessfully for '{ext}'"
+        ))
     }
 }
 
@@ -211,11 +213,11 @@ fn open_folder(editor: Editor, path: &str) -> Result<(), String> {
         .args(["-a", editor.mac_app_name()])
         .arg(path)
         .status()
-        .map_err(|e| format!("편집기를 열지 못했어요: {e}"))?;
+        .map_err(|e| format!("cannot open editor application: {e}"))?;
     if status.success() {
         Ok(())
     } else {
-        Err("편집기를 여는 데 실패했어요. 편집기가 제대로 설치되어 있는지 확인해 주세요.".into())
+        Err("editor application exited unsuccessfully while opening the project".into())
     }
 }
 
@@ -224,17 +226,17 @@ fn open_folder(editor: Editor, path: &str) -> Result<(), String> {
     let home = crate::detect::home_dir();
     let exe = editor
         .installed_path(&home)
-        .ok_or("편집기를 찾지 못했어요. 먼저 설치해 주세요.")?;
+        .ok_or("editor executable was not found")?;
     crate::detect::command(&exe)
         .arg(path)
         .spawn()
-        .map_err(|e| format!("편집기를 열지 못했어요: {e}"))?;
+        .map_err(|e| format!("cannot start editor executable: {e}"))?;
     Ok(())
 }
 
 #[cfg(not(any(target_os = "macos", windows)))]
 fn open_folder(_editor: Editor, _path: &str) -> Result<(), String> {
-    Err("이 운영체제에서는 편집기 열기를 지원하지 않아요.".into())
+    Err("opening an editor is not supported on this operating system".into())
 }
 
 #[cfg(test)]

@@ -142,6 +142,7 @@ export const ko = {
   "home.open": "열기",
   "home.base.label": "이 폴더에서 찾는 중:",
   "home.base.change": "폴더 바꾸기",
+  "home.base.chooseAnother": "다른 폴더 선택하기",
   "home.agent.claude-code": "클로드 코드",
   "home.agent.codex": "코덱스",
   "home.empty": "아직 만든 프로젝트가 없어요.",
