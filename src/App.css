@@ -42,11 +42,12 @@ body {
   -webkit-user-select: none;
 }
 
-/* 복사가 필요한 곳(입력창·경로·로그·에러 상세)만 선택을 허용한다 */
+/* 복사가 필요한 곳(입력창·경로·로그·에러 상세·예시 프롬프트)만 선택을 허용한다 */
 input,
 textarea,
 pre,
-.path-box {
+.path-box,
+.tips-examples li {
   user-select: text;
   -webkit-user-select: text;
 }
@@ -693,6 +694,106 @@ button.link {
 .next-guide .hint {
   margin: 12px 0 0;
   font-size: 12.5px;
+}
+
+/* 사용 팁 (졸업식·홈 공용) */
+.usage-tips {
+  text-align: left;
+}
+
+.usage-tips .tips-lead {
+  margin: 2px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.usage-tips .tips-lead:not(:first-child) {
+  margin-top: 16px;
+}
+
+.tips-examples,
+.tips-know {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tips-examples li {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--accent-soft);
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: text;
+}
+
+.tips-examples li::before {
+  content: "“";
+}
+
+.tips-examples li::after {
+  content: "”";
+}
+
+.tips-know li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.tips-know li::before {
+  content: "•";
+  position: absolute;
+  left: 4px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* 홈: 접이식 사용 팁 카드 */
+.tips-card {
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--bg);
+  padding: 4px 18px;
+}
+
+.tips-card > summary {
+  cursor: pointer;
+  padding: 12px 0;
+  font-size: 14px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.tips-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tips-card > summary::before {
+  content: "＋";
+  margin-right: 8px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tips-card[open] > summary::before {
+  content: "－";
+}
+
+.tips-card[open] > summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+
+.tips-card .usage-tips {
+  padding-bottom: 14px;
 }
 
 .editor-btns {

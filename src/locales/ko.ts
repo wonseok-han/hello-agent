@@ -174,6 +174,23 @@ export const ko = {
   "doctor.disk.advice": "컴퓨터의 저장 공간을 조금 비운 뒤 다시 시도해 주세요.",
   "doctor.generic.title": "문제가 생겼어요",
   "doctor.generic.advice": "다시 시도하면 대부분 해결돼요. 계속 안 되면 아래 '자세한 내용'을 복사해서 도움을 받아보세요.",
+
+  "tips.title": "이제 이렇게 시켜보세요",
+  "tips.try": "이런 말을 그대로 해보세요",
+  "tips.ex1": "이 폴더에 오늘 할 일을 적는 간단한 웹페이지 만들어줘",
+  "tips.ex2": "방금 만든 파일이 무슨 뜻인지 쉽게 설명해줘",
+  "tips.ex3": "글씨가 잘 안 보여, 색을 더 진하게 바꿔줘",
+  "tips.know.title": "알아두면 좋아요",
+  "tips.know1": "평소 말하듯 편하게 부탁하면 돼요. 전문용어는 몰라도 괜찮아요.",
+  "tips.know2": "파일을 바꾸기 전에 에이전트가 먼저 확인을 구해요. 내용을 보고 승인하면 됩니다.",
+  "tips.know3": "오류 메시지가 나오면 그대로 복사해 붙여넣고 “이거 고쳐줘”라고 하세요.",
+  "tips.agent.title": "이 에이전트만의 특징",
+  "tips.agent.claude-code": "화면에서 ‘auto mode’(자동 진행)를 켜두면, 매번 허락받지 않고 여러 작업을 알아서 이어서 해줘요. 익숙해지면 켜보세요.",
+  "tips.agent.codex": "‘goal’(목표)에 하고 싶은 일을 적어주면, 다 끝날 때까지 스스로 단계를 밟아가며 작업해요.",
+  "tips.context.title": "기억시키는 방법 · CLAUDE.md · AGENTS.md",
+  "tips.context.desc1": "프로젝트 폴더의 CLAUDE.md(클로드)·AGENTS.md(코덱스)에 규칙을 적어두면, 에이전트가 매번 그 내용을 먼저 참고해요.",
+  "tips.context.desc2": "예를 들어 ‘항상 한국어로 답해줘’, ‘이 폴더는 이런 프로젝트야’처럼 적어두면 반복해서 설명하지 않아도 돼요.",
+  "home.tips.title": "코딩 에이전트 사용 팁",
 } as const;
 
 export type MessageKey = keyof typeof ko;

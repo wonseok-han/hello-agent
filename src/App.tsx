@@ -485,6 +485,51 @@ function AgentRow({ id, onSetup }: { id: AgentId; onSetup: () => void }) {
   );
 }
 
+// 초보자용 코딩 에이전트 사용 팁. 졸업식(첫 대화 직후)과 홈에서 함께 쓴다.
+// agent를 넘기면 해당 에이전트의 특징만, 없으면(홈) 둘 다 보여준다.
+function UsageTips({ agent }: { agent?: AgentId }) {
+  const { t } = useI18n();
+  return (
+    <div className="usage-tips">
+      <p className="tips-lead">{t("tips.try")}</p>
+      <ul className="tips-examples">
+        <li>{t("tips.ex1")}</li>
+        <li>{t("tips.ex2")}</li>
+        <li>{t("tips.ex3")}</li>
+      </ul>
+
+      <p className="tips-lead">{t("tips.know.title")}</p>
+      <ul className="tips-know">
+        <li>{t("tips.know1")}</li>
+        <li>{t("tips.know2")}</li>
+        <li>{t("tips.know3")}</li>
+      </ul>
+
+      <p className="tips-lead">{t("tips.agent.title")}</p>
+      <ul className="tips-know">
+        {agent ? (
+          <li>{t(`tips.agent.${agent}` as MessageKey)}</li>
+        ) : (
+          <>
+            <li>
+              <strong>Claude Code</strong> — {t("tips.agent.claude-code")}
+            </li>
+            <li>
+              <strong>Codex</strong> — {t("tips.agent.codex")}
+            </li>
+          </>
+        )}
+      </ul>
+
+      <p className="tips-lead">{t("tips.context.title")}</p>
+      <ul className="tips-know">
+        <li>{t("tips.context.desc1")}</li>
+        <li>{t("tips.context.desc2")}</li>
+      </ul>
+    </div>
+  );
+}
+
 function HomeView({
   projects,
   baseDir,
@@ -589,6 +634,11 @@ function HomeView({
           ))}
         </ul>
       )}
+
+      <details className="tips-card">
+        <summary>{t("home.tips.title")}</summary>
+        <UsageTips />
+      </details>
     </main>
   );
 }
@@ -1314,6 +1364,11 @@ function GraduationStep({
             </>
           )}
           <p className="hint">{t("grad.reopen")}</p>
+        </div>
+
+        <div className="next-guide">
+          <strong>{t("tips.title")}</strong>
+          <UsageTips agent={agent} />
         </div>
 
         <button className="link home-link" onClick={onHome}>
