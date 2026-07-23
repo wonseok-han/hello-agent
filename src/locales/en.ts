@@ -192,4 +192,10 @@ export const en: Record<MessageKey, string> = {
   "tips.context.desc1": "Put rules in CLAUDE.md (Claude) or AGENTS.md (Codex) in your project folder, and the agent reads them first every time.",
   "tips.context.desc2": "For example, write “Always answer in Korean” or “This folder is this kind of project,” so you don't have to repeat yourself.",
   "home.tips.title": "Tips for using your coding agent",
+
+  "appUpdate.title": "Version {version} is available",
+  "appUpdate.desc": "Update now to get the latest features right away.",
+  "appUpdate.update": "Update now",
+  "appUpdate.updating": "Updating…",
+  "appUpdate.failed": "The update failed. Please try again in a moment.",
 };

@@ -58,6 +58,40 @@ pre,
   padding: 42px 28px 56px;
 }
 
+/* Hello, Agent 앱 자체 업데이트 배너 */
+.app-update-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+
+.app-update-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-update-text strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.app-update-text span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.app-update-banner button {
+  flex-shrink: 0;
+}
+
 /* ── 헤더 ─────────────────────────────────────────── */
 
 .header {

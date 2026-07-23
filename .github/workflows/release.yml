@@ -51,6 +51,12 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ── 자동 업데이터 서명(무료, 코드 서명과 별개) ───────────────────
+          # `tauri signer generate`로 만든 개인 키/비밀번호를 저장소 시크릿에 넣는다.
+          # 이 값이 있으면 tauri-action이 업데이터 아티팩트에 서명하고 latest.json을
+          # 만들어 릴리스에 올린다. tauri.conf.json의 pubkey와 짝이 맞아야 한다.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           # ── 코드 서명(선택, 현재 미서명) ─────────────────────────────────
           # 지금은 인증서가 없어 미서명으로 빌드한다(다운로드 시 보안 경고는 정상).
           # 주의: APPLE_* env를 빈 값으로라도 넘기면 tauri가 서명을 시도하다

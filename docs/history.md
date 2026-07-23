@@ -51,6 +51,17 @@
 
 ### 2026-07-23 · by Claude Opus 4.8
 
+**추가 작업 — 인앱 자동 업데이터 구현 (tauri-plugin-updater, 무료 서명)**
+- 배경: v0.1.x 사용자는 새 버전 받으려면 수동 재다운로드뿐 → 앱이 스스로 업데이트하도록. 업데이터 서명 키는 무료(ed25519), 유료 코드 서명과 무관
+- Rust: `Cargo.toml`에 `tauri-plugin-updater`·`tauri-plugin-process` 추가, `lib.rs`에 플러그인 등록
+- 설정: `tauri.conf.json` bundle에 `createUpdaterArtifacts: true`, `plugins.updater`(endpoints=releases/latest/download/latest.json, pubkey=**자리표시자 REPLACE_WITH_UPDATER_PUBLIC_KEY**). `capabilities/default.json`에 `updater:default`·`process:default`
+- 프론트: `@tauri-apps/plugin-updater`·`plugin-process` 설치. `AppUpdateBanner` 컴포넌트(시작 시 `check()` → 있으면 배너 → `downloadAndInstall()`+`relaunch()`) 헤더 밑에 배치. `appUpdate.*` i18n ko/en, `.app-update-banner` CSS
+- CI: `release.yml`에 `TAURI_SIGNING_PRIVATE_KEY`·`_PASSWORD` env 추가(있으면 tauri-action이 업데이터 서명 + latest.json 생성·업로드)
+- 검증: `pnpm build`·`cargo check` 통과
+- 키 생성 완료(사용자, 빈 비밀번호). 공개 키를 `~/.tauri/hello-agent-updater.key.pub`에서 읽어 tauri.conf.json pubkey에 **반영 완료**(개인 키는 미접근). 개인 키는 저장소 밖 `~/.tauri/`에 보관
+- **남은 수동 단계(사용자)**: GitHub 시크릿 2개 등록 — `TAURI_SIGNING_PRIVATE_KEY`(개인 키 파일 내용), `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`(빈 값). 그다음 v0.1.2 범프·태그 push하면 서명된 latest.json이 릴리스에 올라가 자동 업데이트 활성화
+- **함정: 소급 안 됨** — v0.1.1까지는 업데이터가 없어 latest.json 확인 불가. 업데이터 첫 탑재 버전(v0.1.2)은 사용자가 한 번 수동 설치해야 이후부터 자동 업데이트됨
+
 **추가 작업 — v0.1.1 릴리스 준비 (버전 범프)**
 - 사용 팁 기능을 담아 v0.1.1로 배포하려고 버전을 3곳 모두 올림: `src-tauri/tauri.conf.json`(파일명 기준)·`package.json`·`src-tauri/Cargo.toml` → `0.1.1`, `Cargo.lock`도 `cargo update -p hello-agent`로 동기화
 - 배포 흐름: 커밋·push 후 `v0.1.1` 태그 push → release.yml이 초안 릴리스 빌드(태그·push는 분류기 차단이라 사용자가 `!`로 실행)

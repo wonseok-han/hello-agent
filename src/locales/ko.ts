@@ -191,6 +191,12 @@ export const ko = {
   "tips.context.desc1": "프로젝트 폴더의 CLAUDE.md(클로드)·AGENTS.md(코덱스)에 규칙을 적어두면, 에이전트가 매번 그 내용을 먼저 참고해요.",
   "tips.context.desc2": "예를 들어 ‘항상 한국어로 답해줘’, ‘이 폴더는 이런 프로젝트야’처럼 적어두면 반복해서 설명하지 않아도 돼요.",
   "home.tips.title": "코딩 에이전트 사용 팁",
+
+  "appUpdate.title": "새 버전 {version}이 나왔어요",
+  "appUpdate.desc": "지금 업데이트하면 최신 기능을 바로 쓸 수 있어요.",
+  "appUpdate.update": "지금 업데이트",
+  "appUpdate.updating": "업데이트 중…",
+  "appUpdate.failed": "업데이트에 실패했어요. 잠시 후 다시 시도해 주세요.",
 } as const;
 
 export type MessageKey = keyof typeof ko;

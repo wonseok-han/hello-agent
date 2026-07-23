@@ -4,6 +4,8 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { useI18n } from "./i18n";
 import { diagnoseError, toAppError, type AppError } from "./doctor";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { check, type Update } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { getBaseDir, setBaseDir, saveProject, lastOpenedMap } from "./store";
 import type { MessageKey } from "./locales/ko";
 import "./App.css";
@@ -317,6 +319,8 @@ function App() {
         <p className="tagline">{t("app.tagline")}</p>
       </header>
 
+      <AppUpdateBanner />
+
       {view === "loading" ? (
         <main className="panel" />
       ) : view === "home" ? (
@@ -481,6 +485,50 @@ function AgentRow({ id, onSetup }: { id: AgentId; onSetup: () => void }) {
         ) : null}
       </div>
       {error && <DoctorCard error={error} onRetry={status ? update : refresh} />}
+    </div>
+  );
+}
+
+// Hello, Agent 앱 자체의 자동 업데이트 배너. 시작 시 새 버전을 확인하고, 있으면
+// 한 번의 클릭으로 내려받아 설치·재시작한다(홈의 에이전트 업데이트와는 별개다).
+function AppUpdateBanner() {
+  const { t } = useI18n();
+  const [update, setUpdate] = useState<Update | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    // 확인 실패(오프라인·미설정 등)는 조용히 무시한다.
+    check()
+      .then((u) => {
+        if (u) setUpdate(u);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!update) return null;
+
+  async function apply() {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await update!.downloadAndInstall();
+      await relaunch();
+    } catch {
+      setFailed(true);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="app-update-banner">
+      <div className="app-update-text">
+        <strong>{t("appUpdate.title", { version: update.version })}</strong>
+        <span>{failed ? t("appUpdate.failed") : t("appUpdate.desc")}</span>
+      </div>
+      <button className="primary small" onClick={apply} disabled={busy}>
+        {busy ? t("appUpdate.updating") : t("appUpdate.update")}
+      </button>
     </div>
   );
 }
