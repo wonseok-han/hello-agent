@@ -78,8 +78,17 @@
 - **검증(로컬)**: 전체 체인 `npm run build`(exit 0) → prerender(exit 0, 29KB HTML). HTML이 참조하는 `/assets/*.js·css` 5개 전부 `out/`에 실존, og 절대 URL·title·아이콘 정상. `npm run lint` 클린(eslint config가 `out/**`·`build/**` 무시), `npm test` 2 pass. `out/`·`dist/`는 이미 gitignore
 - 미검증: 실제 Vercel 빌드 컨테이너에서의 재현(push 후 확인 필요)
 
+**추가 작업 — 첫 릴리스(v0.1.0) 실행, macOS 서명 실패 → 수정**
+- 사용자가 Vercel 배포 성공 확인 후 릴리스 진행. `v0.1.0` 태그 push로 release.yml 첫 실행(태그·push는 auto-mode 분류기가 차단 → 사용자가 `!`로 직접 실행)
+- 결과: **Windows 성공**(초안 릴리스에 `.exe`·`.msi` 첨부), **macOS 실패**
+- **실패 원인**: release.yml에 `APPLE_*` env를 빈 시크릿으로라도 넘겼더니 tauri가 서명을 시도 → `security import: failed to import keychain certificate`. 인증서 없는데 서명 경로가 켜진 것
+- **수정**: env 블록에서 `APPLE_*` 6개를 제거(빈 값도 넘기지 않음)해 미서명으로 빌드되게 함. 서명 켜는 방법은 주석으로 명시. YAML 검증 통과
+- **주의(핵심 발견)**: 미서명 배포 시 `APPLE_*` env는 아예 넘기지 말 것. 빈 문자열이라도 존재하면 tauri가 서명을 시도하다 실패. Windows는 서명 env가 없어 미서명으로 정상 빌드됨
+- 재실행 주의: 워크플로 파일은 **태그가 가리키는 커밋** 기준으로 실행됨 → 수정본을 적용하려면 v0.1.0 태그를 새 커밋으로 재지정(delete+recreate) 후 재push해야 함. 기존 초안 릴리스는 tauri-action이 같은 tagName으로 재사용
+
 **다음 할 일**
-- [ ] (사용자 승인 후) `website/build/prerender.mjs`·`website/vercel.json` + release.yml + 이 이력 커밋·push → Vercel 재배포되며 페이지 정상 렌더 확인
+- [ ] (사용자 재실행) 수정 커밋 push 후 v0.1.0 태그 재지정 → macOS .dmg까지 붙는지 확인
+- [ ] (사용자 승인 후) `website/build/prerender.mjs`·`website/vercel.json` + release.yml + 이 이력 커밋·push → Vercel 재배포되며 페이지 정상 렌더 확인 (웹사이트 부분은 완료: `e0ebdbd`)
 - [ ] 첫 릴리스 시 `v0.1.0` 태그 push → 초안 릴리스 확인 후 공개. 릴리스 워크플로 실제 통과 검증(현재 미검증, 태그 발행해야 실행됨)
 - [ ] Apple Developer / Windows 코드사인 인증서 등록 여부 결정 → 시크릿 채워 서명 활성화
 - [ ] (참고) Vercel 대신 Cloudflare Workers도 `npm run build` 후 `wrangler deploy`로 즉시 가능(SSR·이미지 최적화 유지). prerender는 정적화라 `/_vinext/image` 런타임 최적화는 포기(현재 페이지는 미사용이라 무영향)

@@ -51,16 +51,15 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # ── 코드 서명(선택) ──────────────────────────────────────────────
-          # 인증서를 등록하고 아래 저장소 시크릿을 채우면 자동으로 서명·공증한다.
-          # 비어 있으면 미서명 빌드로 나가고(다운로드 시 보안 경고), 채우면 켜진다.
-          # macOS: Apple Developer($99/년) 발급 Developer ID + 공증 자격
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # ── 코드 서명(선택, 현재 미서명) ─────────────────────────────────
+          # 지금은 인증서가 없어 미서명으로 빌드한다(다운로드 시 보안 경고는 정상).
+          # 주의: APPLE_* env를 빈 값으로라도 넘기면 tauri가 서명을 시도하다
+          #       "security import: failed to import keychain certificate"로 실패한다.
+          #       그래서 여기서는 env를 아예 넘기지 않는다.
+          # 서명을 켤 때: Apple Developer($99/년) 발급 인증서를 저장소 시크릿에 넣고
+          #   아래 6개 env를 이 자리에 추가한다(값이 채워져야만 서명 경로가 켜짐):
+          #     APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD / APPLE_SIGNING_IDENTITY
+          #     APPLE_ID / APPLE_PASSWORD / APPLE_TEAM_ID
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Hello, Agent ${{ github.ref_name }}"
