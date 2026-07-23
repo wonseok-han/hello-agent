@@ -51,6 +51,11 @@
 
 ### 2026-07-23 · by Claude Opus 4.8
 
+**추가 작업 — v0.1.1 릴리스 준비 (버전 범프)**
+- 사용 팁 기능을 담아 v0.1.1로 배포하려고 버전을 3곳 모두 올림: `src-tauri/tauri.conf.json`(파일명 기준)·`package.json`·`src-tauri/Cargo.toml` → `0.1.1`, `Cargo.lock`도 `cargo update -p hello-agent`로 동기화
+- 배포 흐름: 커밋·push 후 `v0.1.1` 태그 push → release.yml이 초안 릴리스 빌드(태그·push는 분류기 차단이라 사용자가 `!`로 실행)
+- 릴리스 노트는 초안 생성 후 gh release edit로 작성 예정(사용 팁 추가 강조)
+
 **추가 작업 — 초보자용 "코딩 에이전트 사용 팁" 추가 (졸업식 + 홈)**
 - 배경: 온보딩 끝난 비개발자가 "그래서 뭘 어떻게 시키지?"에서 다시 막히는 게 제품 최대 공백. 사용자 제안으로 팁 추가, 위치는 두 곳 다 합의
 - `src/App.tsx`: 재사용 컴포넌트 `UsageTips` 신설. **졸업식** 성공 화면 next-guide 뒤에 인라인(`agent` prop 전달), **홈** 하단에 접이식 `<details className="tips-card">` 카드로 배치

@@ -1,6 +1,6 @@
 [package]
 name = "hello-agent"
-version = "0.1.0"
+version = "0.1.1"
 description = "초보자용 코딩 에이전트 설치·설정 도우미"
 authors = ["wonseok-han"]
 edition = "2021"
